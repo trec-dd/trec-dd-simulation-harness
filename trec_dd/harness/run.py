@@ -5,126 +5,175 @@
 
 '''
 
-## TODO: convert this quick prototype to actually using `yakonfig` and
-## `Cmd` so that it takes a -c to our regular config.yaml file that
-## tells it how to reach kvlayer to access dossier.label.  When this
-## gets published for TREC, we should just provide a kvlayer *file*
-## backend.
+from __future__ import absolute_import, print_function
 
-from __future__ import absolute_imports, print_function
 import argparse
+from dossier.label import LabelStore, Label, CorefValue
 import json
 import itertools
-from hashlib import md5
+import kvlayer
 import logging
-import random
 from random import random as rand
+import sys
 import time
+import yakonfig
 
 logger = logging.getLogger(__name__)
 
-class Harness(object):
-    def __init__(self, truth_data_path, run_file_path):
-        self.truth_data = open(truth_data_path, mode='rb')
-        if os.path.exists(run_file_path):
-            logger.warn('appending to existing run file at %r', run_file_path)
-            self.run_file = open(run_file_path, mode='ab')
-        else:
-            logger.warn('starting new run file at %r', run_file_path)
-            self.run_file = open(run_file_path, mode='wb')
 
-    def start(self, topic_id):
-        ## TOOD: check that the topic_id exists in the input data
-        return
+def query_to_topic_id(query):
+    return query.replace(' ', '_')
+
+
+def topic_id_to_query(topic_id):
+    return topic_id.replace('_', ' ')
+
+
+class Harness(object):
+
+    def __init__(self, topic_query, runfile_path, label_store):
+        self.runfile_path = runfile_path
+        self.label_store = label_store
+        self.topic_query = topic_query
+
+    config_name = 'harness'
+
+    default_config = {
+        'runfile_path': 'runfile.txt',
+        'topic': None,
+        'batch_size': 5
+    }
+
+    # Tell yakonfig that you can replace these at the command
+    # line.
+    runtime_keys = {
+        'topic': 'topic',
+        'runfile_path': 'runfile_path',
+        'batch_size': 'batch_size'
+    }
+
+    @staticmethod
+    def add_arguments(parser):
+        parser.add_argument('--topic',
+                            help='topic on which to work')
+        parser.add_argument('--runfile-path', type=str,
+                            help='where to write runfile')
+        parser.add_argument('--batch_size', type=int,
+                            help='number of results per batch')
+
+    def start(self):
+        topic_id = query_to_topic_id(self.topic_query)
+
+        # Ping labels table to see if our topic even exists.
+        labels = list(self.label_store.directly_connected(topic_id))
+        if len(labels) == 0:
+            logger.error("Topic doesn't exist: '%s'.", self.topic_query)
+            return False
+
+        return True
+
+    def stop(self):
+        logger.info("Stopping topic: '%s'", self.topic_query)
 
     def step(self, results):
-        ## TODO: make this actually lookup data in dossier.label
-        feedback = []
-        for stream_id, conf in results:
-            subtopics = []
-            ## make some random data:
-            for i in range(int(rand() * 4)):
-                words = ' '.join(['word'] * int(rand() * 10))
-                subtopic_id = int(rand() * 6)
-                subtopics.append(
-                    {"subtopic_id": subtopic_id, 
-                     "offset": {
-                            "first": int(rand() * 3000), 
-                            "length": len(words)
-                            }, 
-                     "rating": int(rand() * 4), 
-                     "string": words})
+        def feedback_for_result(result):
+            doc_id, confidence = result
+            topic = query_to_topic_id(self.topic_query)
+            labels_for_doc = self.label_store.directly_connected(doc_id)
+            labels_for_doc = filter(lambda l: l.other(doc_id) == topic,
+                                    labels_for_doc)
 
-            ## more random
-            on_topic = rand() < 0.4
-            res = {"stream_id": stream_id, "on_topic": on_topic, 
-                   "confidence": conf, "subtopics": []}
-            if on_topic:
-                res['subtopics'] = subtopics
+            def subtopic_from_label(label):
+                subtopic_id = label.subtopic_for(doc_id)
+                offset, text = subtopic_id.split('|')
+                text = topic_id_to_query(text)
+                subtopic = {
+                    'subtopic_id': topic_id_to_query(label.subtopic_for(topic)),
+                    'offset': offset,
+                    'text': text,
+                    'rating': label.relevance
+                }
+                return subtopic
 
-            feedback.append(res)
+            subtopics = map(subtopic_from_label, labels_for_doc)
 
-        return feedback
+            feedback = {
+                'topic_id': self.topic_query,
+                'confidence': confidence,
+                'stream_id': doc_id,
+                'subtopics': subtopics,
+                'on_topic': len(subtopics) > 0
+            }
 
-    def stop(self, topic_id):
-        ## TODO, more tidying up in the run file?  maybe comments
-        self.truth_data.close()
-        self.run_file.close()
+            return feedback
 
+        all_feedback = map(feedback_for_result, results)
+        self.write_feedback_to_runfile(all_feedback)
+        return all_feedback
 
-def main():
-    parser = argparse.ArgumentParser(__doc__)
+    def write_feedback_to_runfile(self, feedback):
+        runfile = open(self.runfile_path, 'a')
+
+        # <topic> <document-id> <on_topic> <subtopic> <relevance>
+        runfile_line = '{}\t{}\t{}\t{}\t{}\n'
+
+        for entry in feedback:
+            if entry['subtopics']:
+                for subtopic in entry['subtopics']:
+                    to_write = runfile_line.format(query_to_topic_id(entry['topic_id']),
+                                                   entry['stream_id'],
+                                                   entry['on_topic'],
+                                                   subtopic['subtopic_id'],
+                                                   subtopic['rating'])
+                    runfile.write(to_write)
+            else:
+                to_write = runfile_line.format(query_to_topic_id(entry['topic_id']),
+                                               entry['stream_id'],
+                                               entry['on_topic'],
+                                               'null',
+                                               'null')
+
+                runfile.write(to_write)
+
+        runfile.close()
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(__doc__,
+                                     conflict_handler='resolve')
     parser.add_argument('command', help='must be "start", "step", or "stop"')
-    parser.add_argument('args', help='input for given command')
-    parser.add_argument('--batch-size', type=int, default=5, help='number of results per step')
-    parser.add_argument(
-        '--one-line', action='store_true', default=False, 
-        help='instead of pretty printed JSON, print feedback for each `step` on a single line')
-    args = parser.parse_args()
+    parser.add_argument('args', help='input for given command',
+                        nargs=argparse.REMAINDER)
+
+    modules = [yakonfig, kvlayer, Harness]
+    args = yakonfig.parse_args(parser, modules)
 
     logging.basicConfig(level=logging.DEBUG)
-    
+
     if args.command not in set(['start', 'step', 'stop']):
         sys.exit('The only known commands are "start", "step", and "stop".')
 
-
-    harness = None
+    kvl = kvlayer.client()
+    label_store = LabelStore(kvl)
+    config = yakonfig.get_global_config('harness')
+    harness = Harness(config['topic'], config['runfile_path'], label_store)
 
     if args.command == 'start':
-        parts = args.args.split()
-        if len(parts) != 3:
-            sys.exit('command="start" requires three input args: ' + \
-                     'path/to/truth_data.json, topic_id path/to/run_file.txt, not %r' % args.args)
-        truth_data_path, topic_id, run_file_path = parts
+        result = harness.start()
 
-        harness = Harness(run_file_path)
-        harness.start(topic_id)
-
-
-    elif args.command = 'stop':
-        parts = args.args.split()
-        if len(parts) != 1:
-            sys.exit('command="stop" requires one input arg: topic_id, not %r' % args.args)
-        harness.stop(parts[0])
-
-
+        if result:
+            logger.info('Ready for input.')
+    elif args.command == 'stop':
+        harness.stop()
     elif args.command == 'step':
-        if harness is None: 
-            sys.exit('must call "start" before "step"')
-        
-        parts = args.args.split()
-        if len(parts) != 2 * args.batch_size:
-            sys.exit('command="step" requires twice batch_size (2 x %d = %d) ' + \
-                     'input args: stream_id conf stream_id conf ..., not %r' % (
-                     args.batch_size, 2 * args.batch_size, args.args))
+        parts = args.args
+        if len(parts) != 2 * config['batch_size']:
+            sys.exit('command="step" requires twice batch_size (2 x %d = %d) '
+                     + 'input args: stream_id conf stream_id conf ..., not %r'
+                     % (args.batch_size, 2 * args.batch_size, args.args))
 
         pairs = [iter(parts)] * 2
         results = [(stream_id, int(conf))
-                   for stream_id, conf in itertools.izip_longest(*pairs):]
+                   for stream_id, conf in itertools.izip_longest(*pairs)]
 
         feedback = harness.step(results)
         print(json.dumps(feedback, indent=4, sort_keys=True))
-        
-
-if __name__ == '__main__':
-    main()
