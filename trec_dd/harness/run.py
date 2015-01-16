@@ -77,30 +77,30 @@ class Harness(object):
 
     def step(self, results):
         def feedback_for_result(result):
-            doc_id, confidence = result
+            stream_id, confidence = result
             topic = query_to_topic_id(self.topic_query)
-            labels_for_doc = self.label_store.directly_connected(doc_id)
-            labels_for_doc = filter(lambda l: l.other(doc_id) == topic,
+            labels_for_doc = self.label_store.directly_connected(stream_id)
+            labels_for_doc = filter(lambda l: l.other(stream_id) == topic,
                                     labels_for_doc)
 
             def subtopic_from_label(label):
-                subtopic_id = label.subtopic_for(doc_id)
+                subtopic_id = label.subtopic_for(stream_id)
                 offset, text = subtopic_id.split('|')
                 text = topic_id_to_query(text)
                 subtopic = {
-                    'subtopic_id': topic_id_to_query(label.subtopic_for(topic)),
+                    'subtopic_id': label.subtopic_for(topic),
                     'offset': offset,
                     'text': text,
-                    'rating': label.relevance
+                    'rating': label.rating
                 }
                 return subtopic
 
             subtopics = map(subtopic_from_label, labels_for_doc)
 
             feedback = {
-                'topic_id': self.topic_query,
+                'topic_id': self.topic_query.replace(' ', '_'),
                 'confidence': confidence,
-                'stream_id': doc_id,
+                'stream_id': stream_id,
                 'subtopics': subtopics,
                 'on_topic': len(subtopics) > 0
             }
@@ -114,21 +114,23 @@ class Harness(object):
     def write_feedback_to_runfile(self, feedback):
         runfile = open(self.runfile_path, 'a')
 
-        # <topic> <document-id> <on_topic> <subtopic> <relevance>
-        runfile_line = '{}\t{}\t{}\t{}\t{}\n'
+        # <topic> <document-id> <on_topic> <subtopic> <rating>
+        runfile_line = '{}\t{}\t{}\t{}\t{}\t{}\n'
 
         for entry in feedback:
             if entry['subtopics']:
                 for subtopic in entry['subtopics']:
                     to_write = runfile_line.format(query_to_topic_id(entry['topic_id']),
                                                    entry['stream_id'],
+                                                   entry['confidence'],
                                                    entry['on_topic'],
-                                                   subtopic['subtopic_id'],
+                                                   subtopic['subtopic_id'].replace(' ', '_'),
                                                    subtopic['rating'])
                     runfile.write(to_write)
             else:
                 to_write = runfile_line.format(query_to_topic_id(entry['topic_id']),
                                                entry['stream_id'],
+                                               entry['confidence'],
                                                entry['on_topic'],
                                                'null',
                                                'null')
@@ -137,7 +139,7 @@ class Harness(object):
 
         runfile.close()
 
-if __name__ == '__main__':
+def main():
     parser = argparse.ArgumentParser(__doc__,
                                      conflict_handler='resolve')
     parser.add_argument('command', help='must be "start", "step", or "stop"')
@@ -162,14 +164,16 @@ if __name__ == '__main__':
 
         if result:
             logger.info('Ready for input.')
+
     elif args.command == 'stop':
         harness.stop()
+
     elif args.command == 'step':
         parts = args.args
         if len(parts) != 2 * config['batch_size']:
             sys.exit('command="step" requires twice batch_size (2 x %d = %d) '
-                     + 'input args: stream_id conf stream_id conf ..., not %r'
-                     % (args.batch_size, 2 * args.batch_size, args.args))
+                     'input args: stream_id conf stream_id conf ..., not %r'
+                     % (config['batch_size'], 2 * config['batch_size'], args.args))
 
         pairs = [iter(parts)] * 2
         results = [(stream_id, int(conf))
@@ -177,3 +181,6 @@ if __name__ == '__main__':
 
         feedback = harness.step(results)
         print(json.dumps(feedback, indent=4, sort_keys=True))
+
+if __name__ == '__main__':
+    main()

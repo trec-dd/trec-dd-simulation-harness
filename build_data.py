@@ -25,22 +25,28 @@ def build_demo_data(kvl):
                  'Camp_Ramrod',
                  'Town_of_Wamba']
     subtopic_to_documents = {
-        0: [(random_sid(), '15-93|we_drove_out_to_the_other_side_' +
-             'of_the_river_delta_to_a_small_fish_smoking_camp', 3)],
-        1: [(random_sid(), '200-217|Ramrod_(Facility)', 2)],
-        2: [(random_sid(), '53-63|Wamba_Town', 2),
-            (random_sid(), '44-50|Woomba', 1)]
+        0: [(random_sid(), '2100-%d|%s' % (len(subtopics[0]), subtopics[0]), 3),
+            (random_sid(), '15-93|we_drove_out_to_the_other_side_' +
+             'of_the_river_delta_to_a_small_fish_smoking_camp', 2)
+        ],
+        1: [(random_sid(), '3120-%d|%s' % (len(subtopics[1]), subtopics[1]), 2),
+            (random_sid(), '200-217|Ramrod_(Facility)', 3)
+        ],
+        2: [(random_sid(), '3120-%d|%s' % (len(subtopics[2]), subtopics[2]), 3),
+            (random_sid(), '53-63|Wamba_Town', 2),
+            (random_sid(), '44-50|Woomba', 1)
+        ]
     }
 
     for idx, subtopic in enumerate(subtopics):
-        for doc_id, subtopic_id2, relevance in subtopic_to_documents[idx]:
+        for stream_id, subtopic_id2, rating in subtopic_to_documents[idx]:
 
-            print doc_id
+            print stream_id
 
-            label = Label(topic, doc_id, 'John', CorefValue.Positive,
+            label = Label(topic, stream_id, 'John', CorefValue.Positive,
                           subtopic_id1=subtopic,
                           subtopic_id2=subtopic_id2,
-                          relevance=relevance)
+                          rating=rating)
             label_store.put(label)
 
 

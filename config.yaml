@@ -1,9 +1,9 @@
 harness:
-  runfile_path: ./data/demo_runfile.txt
+  runfile_path: ./demo_runfile.txt
   batch_size: 5
 
 kvlayer:
   namespace: test
   app_name: test
   storage_type: filestorage
-  filename: ./data/demo_data
+  filename: ./demo_data
