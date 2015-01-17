@@ -1,1 +1,6 @@
+RELEASE-VERSION
+dist
+build
+trec_dd.egg-info/
+*.py[co]
 *~
