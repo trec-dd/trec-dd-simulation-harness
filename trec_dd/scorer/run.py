@@ -19,6 +19,8 @@ import time
 import yakonfig
 
 from trec_dd.scorer.u_err import u_err
+from trec_dd.scorer.reciprocal_rank_at_recall import reciprocal_rank_at_recall
+from trec_dd.scorer.precision_at_recall import precision_at_recall
 
 logger = logging.getLogger(__name__)
 
@@ -101,12 +103,12 @@ where subtopics is a list of two-tuples of (subtopic_id, rating)
     return results_by_topic
 
 
-def cube_test(run):
-    pass
 
 available_scorers = {
-    'cube_test': cube_test,
-    'u_err': u_err,
+    #'cube_test': cube_test,
+    #'u_err': u_err,
+    'reciprocal_rank_at_recall': reciprocal_rank_at_recall,
+    'precision_at_recall': precision_at_recall,
     }
 
 def main():
