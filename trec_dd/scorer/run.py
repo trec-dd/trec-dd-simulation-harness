@@ -21,6 +21,7 @@ import yakonfig
 from trec_dd.scorer.u_err import u_err
 from trec_dd.scorer.reciprocal_rank_at_recall import reciprocal_rank_at_recall
 from trec_dd.scorer.precision_at_recall import precision_at_recall
+from trec_dd.scorer.modified_precision_at_recall import modified_precision_at_recall
 
 logger = logging.getLogger(__name__)
 
@@ -109,6 +110,7 @@ available_scorers = {
     #'u_err': u_err,
     'reciprocal_rank_at_recall': reciprocal_rank_at_recall,
     'precision_at_recall': precision_at_recall,
+    'modified_precision_at_recall': modified_precision_at_recall,
     }
 
 def main():
