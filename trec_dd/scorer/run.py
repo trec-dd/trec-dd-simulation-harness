@@ -115,27 +115,23 @@ def main():
     parser.add_argument('run')
     parser.add_argument('--scorer', action='append', default=[], dest='scorers', help='names of scorer functions')
 
-    modules = [yakonfig] #, kvlayer]
+    modules = [yakonfig, kvlayer]
     args = yakonfig.parse_args(parser, modules)
 
     logging.basicConfig(level=logging.DEBUG)
 
-    #if args.command not in set(['start', 'step', 'stop']):
-    #    sys.exit('The only known commands are "start", "step", and "stop".')
-
-    #kvl = kvlayer.client()
-    #label_store = LabelStore(kvl)
+    kvl = kvlayer.client()
+    label_store = LabelStore(kvl)
     #config = yakonfig.get_global_config('')
     
     run = load_run(args.run)
 
     for scorer_name in args.scorers:
         scorer = available_scorers.get(scorer_name)
-        scorer(run)
+        scorer(run, label_store)
 
     import json
     print(json.dumps(run, indent=4))
-
 
 
 if __name__ == '__main__':
