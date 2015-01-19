@@ -22,6 +22,7 @@ from trec_dd.scorer.u_err import u_err
 from trec_dd.scorer.reciprocal_rank_at_recall import reciprocal_rank_at_recall
 from trec_dd.scorer.precision_at_recall import precision_at_recall
 from trec_dd.scorer.modified_precision_at_recall import modified_precision_at_recall
+from trec_dd.scorer.average_err import average_err
 
 logger = logging.getLogger(__name__)
 
@@ -111,6 +112,7 @@ available_scorers = {
     'reciprocal_rank_at_recall': reciprocal_rank_at_recall,
     'precision_at_recall': precision_at_recall,
     'modified_precision_at_recall': modified_precision_at_recall,
+    'average_err': average_err,
     }
 
 def main():
