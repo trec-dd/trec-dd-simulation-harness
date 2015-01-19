@@ -112,7 +112,14 @@ available_scorers = {
     'reciprocal_rank_at_recall': reciprocal_rank_at_recall,
     'precision_at_recall': precision_at_recall,
     'modified_precision_at_recall': modified_precision_at_recall,
-    'average_err': average_err,
+    'average_err_arithmetic': lambda run,label_store: average_err(run, 
+                                                               label_store,
+                                                               'arithmetic'
+                                                               ),
+    'average_err_harmonic': lambda run,label_store: average_err(run, 
+                                                               label_store, 
+                                                               'harmonic'
+                                                               ),
     }
 
 def main():

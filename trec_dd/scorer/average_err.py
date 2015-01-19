@@ -7,8 +7,8 @@
    Copyright 2015 Diffeo, Inc.
 
 '''
-
 from __future__ import division
+import sys
 from operator import attrgetter
 from collections import defaultdict
 
@@ -20,8 +20,14 @@ def mean(l):
     s = sum(l)
     return s / len(l)
 
+def harmonic_mean(l):
+    return len(l) / sum(1/s for s in l)
 
-def average_err(run, label_store):
+
+def average_err(run, label_store, mean_type='arithmetic'):
+    '''
+    mean_type can be `arithmetic' or `harmonic'
+    '''
 
     scores_by_topic = dict()
 
@@ -48,17 +54,22 @@ def average_err(run, label_store):
                 ## update stopping probabilities
                 p_continue[subtopic] *= (1-rel)
 
-        print score
 
-            
         ## precision is number of documents relevant at stopping point
-
-        scores_by_topic[topic_id] = mean(score.values())
+        if mean_type == 'arithmetic':
+            scores_by_topic[topic_id] = mean(score.values())
+        elif mean_type == 'harmonic':
+            scores_by_topic[topic_id] = harmonic_mean(score.values())
+        else:
+            sys.exit('Error: invalid mean type specified.')
 
 
 
 
     ## macro average over all the topics
     macro_avg = mean(scores_by_topic.values())
-    run['scores']['average_err'] = \
+
+    scorer_name = 'average_err_%s' % mean_type
+
+    run['scores'][scorer_name] = \
         {'scores_by_topic': scores_by_topic, 'macro_average': macro_avg}
