@@ -23,6 +23,7 @@ from trec_dd.scorer.reciprocal_rank_at_recall import reciprocal_rank_at_recall
 from trec_dd.scorer.precision_at_recall import precision_at_recall
 from trec_dd.scorer.modified_precision_at_recall import modified_precision_at_recall
 from trec_dd.scorer.average_err import average_err
+from trec_dd.scorer.cube_test import cube_test
 
 logger = logging.getLogger(__name__)
 
@@ -51,7 +52,8 @@ where subtopics is a list of two-tuples of (subtopic_id, rating)
         if len(parts) == 8:
             parts.append('')
         assert len(parts) == 9, (len(parts), parts, line)
-        team_id, system_id, batch_num, rank, topic_id, stream_id, confidence, on_topic, subtopics_and_ratings = parts
+        team_id, system_id, batch_num, rank, topic_id, stream_id, \
+                                    confidence, on_topic, subtopics_and_ratings = parts
         assert on_topic in set(['false', 'true']), line
         on_topic = json.loads(on_topic)
         confidence = int(confidence)
@@ -112,6 +114,7 @@ available_scorers = {
     'reciprocal_rank_at_recall': reciprocal_rank_at_recall,
     'precision_at_recall': precision_at_recall,
     'modified_precision_at_recall': modified_precision_at_recall,
+    'cube_test': cube_test,
     'average_err_arithmetic': lambda run,label_store: average_err(run, 
                                                                label_store,
                                                                'arithmetic'
@@ -126,7 +129,8 @@ def main():
     parser = argparse.ArgumentParser(__doc__,
                                      conflict_handler='resolve')
     parser.add_argument('run')
-    parser.add_argument('--scorer', action='append', default=[], dest='scorers', help='names of scorer functions')
+    parser.add_argument('--scorer', action='append', default=[], 
+        dest='scorers', help='names of scorer functions')
 
     modules = [yakonfig, kvlayer]
     args = yakonfig.parse_args(parser, modules)
