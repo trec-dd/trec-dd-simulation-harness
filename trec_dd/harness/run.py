@@ -31,7 +31,7 @@ def topic_id_to_query(topic_id):
 
 class Harness(object):
 
-    def __init__(self, topic_query, runfile_path, label_store):
+    def __init__(self, topic_query, label_store, runfile_path=None):
         self.runfile_path = runfile_path
         self.label_store = label_store
         self.topic_query = topic_query
@@ -85,8 +85,11 @@ class Harness(object):
 
             def subtopic_from_label(label):
                 subtopic_id = label.subtopic_for(stream_id)
-                offset, text = subtopic_id.split('|')
-                text = topic_id_to_query(text)
+                if '|' not in subtopic_id:
+                    offset, text = ('', '')
+                else:
+                    offset, text = subtopic_id.split('|')
+                    text = topic_id_to_query(text)
                 subtopic = {
                     'subtopic_id': label.subtopic_for(topic),
                     'offset': offset,
@@ -112,6 +115,9 @@ class Harness(object):
         return all_feedback
 
     def write_feedback_to_runfile(self, feedback):
+        if self.runfile_path is None:
+            return
+
         runfile = open(self.runfile_path, 'a')
 
         # <topic> <document-id> <on_topic> <subtopic> <rating>
