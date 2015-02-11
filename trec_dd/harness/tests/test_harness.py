@@ -25,7 +25,7 @@ def build_test_data(kvl):
     topics = ['topic1', 'topic2', 'topic3']
     subtopics = ['subtopic1', 'subtopic2', 'subtopic3']
     offset = '13-235'
-    relevances = [[1, 2, 3]]*3
+    ratings = [[1, 2, 3]]*3
 
     label_store = LabelStore(kvl)
 
@@ -35,20 +35,20 @@ def build_test_data(kvl):
                           'me', CorefValue.Positive,
                           subtopic_id1=subtopic,
                           subtopic_id2=offset + '|' + 'some_text',
-                          relevance=relevances[t_idx][s_idx])
+                          rating=ratings[t_idx][s_idx])
             label_store.put(label)
 
 
 def test_start(local_kvl):
     label_store = LabelStore(local_kvl)
-    harness = Harness('topic1', 'some_path.txt', label_store)
+    harness = Harness('topic1', label_store, runfile_path='some_path.txt')
     harness.start()
 
 
 def test_step(local_kvl, tmpdir):
     runfile_path = os.path.join(str(tmpdir), 'runfile.txt')
     label_store = LabelStore(local_kvl)
-    harness = Harness('topic1', runfile_path, label_store)
+    harness = Harness('topic1', label_store, runfile_path=runfile_path)
     results = [('doc02', 244), ('doc01', 100), ('doc12', 999),
                ('doc22', 445), ('doc11', 773)]
     feedback = harness.step(results)
@@ -72,14 +72,14 @@ def test_step(local_kvl, tmpdir):
     # Check write file
     runfile = open(runfile_path, 'r')
     for idx, line in enumerate(csv.reader(runfile, delimiter='\t')):
-        topic, doc_id, on_topic, subtopic, relevance = line
+        topic, doc_id, confidence, on_topic, subtopic, rating = line
         assert topic == feedback[idx]['topic_id']
         assert doc_id == feedback[idx]['stream_id']
         assert on_topic == str(feedback[idx]['on_topic'])
 
         if idx in [0, 1]:
             assert subtopic != 'null'
-            assert relevance != 'null'
+            assert rating != 'null'
         else:
             assert subtopic == 'null'
-            assert relevance == 'null'
+            assert rating == 'null'
