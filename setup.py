@@ -93,6 +93,7 @@ setup(
         'License :: OSI Approved :: MIT License',  ## MIT/X11 license http://opensource.org/licenses/MIT
     ],
     install_requires=[
+        'dossier.label',
     ],
     entry_points={
         'console_scripts': [
