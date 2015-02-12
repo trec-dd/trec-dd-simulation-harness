@@ -9,21 +9,14 @@ from __future__ import absolute_import, print_function, division
 
 import argparse
 from collections import defaultdict
-from dossier.label import LabelStore, Label, CorefValue
 import json
-import itertools
 import kvlayer
 import logging
 import sys
-import time
 import yakonfig
 
-from trec_dd.scorer.u_err import u_err
-from trec_dd.scorer.reciprocal_rank_at_recall import reciprocal_rank_at_recall
-from trec_dd.scorer.precision_at_recall import precision_at_recall
-from trec_dd.scorer.modified_precision_at_recall import modified_precision_at_recall
-from trec_dd.scorer.average_err import average_err
-from trec_dd.scorer.cube_test import cube_test
+from trec_dd.scorer import available_scorers
+
 
 logger = logging.getLogger(__name__)
 
@@ -75,14 +68,14 @@ where subtopics is a list of two-tuples of (subtopic_id, rating)
                 prev_batch_num = None
                 prev_rank = None
 
-        if prev_batch_num is None: 
+        if prev_batch_num is None:
             prev_batch_num = batch_num
         else:
             assert batch_num in set([prev_batch_num, prev_batch_num + 1]), \
                 (batch_num, prev_batch_num, line)
             prev_batch_num = batch_num
 
-        if prev_rank is None: 
+        if prev_rank is None:
             prev_rank = rank
         else:
             assert rank == prev_rank + 1, (rank, prev_rank, line)
@@ -96,40 +89,22 @@ where subtopics is a list of two-tuples of (subtopic_id, rating)
         else:
             for rec in subtopics_and_ratings.split('|'):
                 subtopic_id, rating = rec.split(':')
-                subtopics.append( (subtopic_id, int(rating) ) )
+                subtopics.append((subtopic_id, int(rating)))
 
         results_by_topic['results'][topic_id].append(dict(
                 batch_num=batch_num, rank=rank,
-                stream_id=stream_id, confidence=confidence, on_topic=on_topic, 
+                stream_id=stream_id, confidence=confidence, on_topic=on_topic,
                 subtopics=subtopics,
                 ))
 
     return results_by_topic
 
 
-
-available_scorers = {
-    #'cube_test': cube_test,
-    #'u_err': u_err,
-    'reciprocal_rank_at_recall': reciprocal_rank_at_recall,
-    'precision_at_recall': precision_at_recall,
-    'modified_precision_at_recall': modified_precision_at_recall,
-    'cube_test': cube_test,
-    'average_err_arithmetic': lambda run,label_store: average_err(run, 
-                                                               label_store,
-                                                               'arithmetic'
-                                                               ),
-    'average_err_harmonic': lambda run,label_store: average_err(run, 
-                                                               label_store, 
-                                                               'harmonic'
-                                                               ),
-    }
-
 def main():
     parser = argparse.ArgumentParser(__doc__,
                                      conflict_handler='resolve')
     parser.add_argument('run')
-    parser.add_argument('--scorer', action='append', default=[], 
+    parser.add_argument('--scorer', action='append', default=[],
         dest='scorers', help='names of scorer functions')
 
     modules = [yakonfig, kvlayer]
@@ -139,15 +114,14 @@ def main():
 
     kvl = kvlayer.client()
     label_store = LabelStore(kvl)
-    #config = yakonfig.get_global_config('')
-    
+    # config = yakonfig.get_global_config('')
+
     run = load_run(args.run)
 
     for scorer_name in args.scorers:
         scorer = available_scorers.get(scorer_name)
         scorer(run, label_store)
 
-    import json
     print(json.dumps(run, indent=4))
 
 
