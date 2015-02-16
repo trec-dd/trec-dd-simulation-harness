@@ -17,10 +17,16 @@ from collections import defaultdict
 from trec_dd.utils import get_all_subtopics
 
 def mean(l):
+    if len(l) == 0:
+        return 0.0
+
     s = sum(l)
     return s / len(l)
 
 def harmonic_mean(l):
+    if any([s == 0.0 for s in l]):
+        return 0.0
+
     return len(l) / sum(1/s for s in l)
 
 

@@ -19,6 +19,9 @@ from operator import attrgetter
 from trec_dd.utils import get_all_subtopics
 
 def mean(l):
+    if len(l) == 0:
+        return 0.0
+
     s = sum(l)
     return s / len(l)
 
