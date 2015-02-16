@@ -24,7 +24,7 @@ def mean(l):
     return s / len(l)
 
 def harmonic_mean(l):
-    if any([s == 0.0 for s in l]):
+    if len(l) == 0 or any([s == 0.0 for s in l]):
         return 0.0
 
     return len(l) / sum(1/s for s in l)
