@@ -30,12 +30,29 @@ def harmonic_mean(l):
     return len(l) / sum(1/s for s in l)
 
 
-def average_err(run, label_store, mean_type='arithmetic'):
+def graded_relevance(rating):
+    return (2**rating - 1)/2**4
+
+
+def binary_relevance(rating):
+    if rating > 0.0:
+        return 1.0
+    else:
+        return 0.0
+
+
+relevance_metrics = {
+    'graded': graded_relevance,
+    'binary': binary_relevance
+}
+
+
+def average_err(run, label_store, mean_type='arithmetic', relevance_metric='graded'):
     '''
     mean_type can be `arithmetic' or `harmonic'
     '''
-
     scores_by_topic = dict()
+    relevance_func = relevance_metrics[relevance_metric]
 
     ## score for each topic
     for topic_id, results in run['results'].items():
@@ -52,7 +69,7 @@ def average_err(run, label_store, mean_type='arithmetic'):
             assert idx == result['rank'] - 1
 
             for subtopic, conf in result['subtopics']:
-                rel = (2**conf - 1)/2**4 ## magic formula for relevance
+                rel = relevance_func(conf)
 
                 p_stop_here = p_continue[subtopic]*rel
                 score[subtopic] += p_stop_here/(idx+1)

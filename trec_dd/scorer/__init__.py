@@ -9,11 +9,19 @@ from trec_dd.scorer.cube_test import cube_test
 
 
 def average_err_harmonic(run, label_store):
-    return average_err(run, label_store, 'arithmetic')
+    return average_err(run, label_store, 'harmonic')
 
 
 def average_err_arithmetic(run, label_store):
-    return average_err(run, label_store, 'harmonic')
+    return average_err(run, label_store, 'arithmetic')
+
+def average_err_arithmetic_binary(run, label_store):
+    return average_err(run, label_store, 'arithmetic',
+                       relevance_metric='binary')
+
+def average_err_harmonic_binary(run, label_store):
+    return average_err(run, label_store, 'harmonic',
+                       relevance_metric='binary')
 
 
 available_scorers = {
@@ -23,4 +31,6 @@ available_scorers = {
     'cube_test': cube_test,
     'average_err_arithmetic': average_err_arithmetic,
     'average_err_harmonic': average_err_harmonic,
+    'average_err_arithmetic_binary': average_err_arithmetic_binary,
+    'average_err_harmonic_binary': average_err_harmonic_binary
 }
