@@ -83,22 +83,32 @@ class Harness(object):
             labels_for_doc = filter(lambda l: l.other(stream_id) == topic,
                                     labels_for_doc)
 
-            def subtopic_from_label(label):
-                subtopic_id = label.subtopic_for(stream_id)
-                if '|' not in subtopic_id:
-                    offset, text = ('', '')
-                else:
-                    offset, text = subtopic_id.split('|')
-                    text = topic_id_to_query(text)
-                subtopic = {
-                    'subtopic_id': label.subtopic_for(topic),
-                    'offset': offset,
-                    'text': text,
-                    'rating': label.rating
-                }
-                return subtopic
+            # If any of the labels between the topic_id and
+            # the document are negative, we call this document
+            # off-topic. If there are no labels between this
+            # topic_id and the document, we call this document
+            # off-topic. Otherwise, we extract the subtopics
+            # from the labels and call the document on-topic.
+            if any([label.value == CorefValue.Negative
+                    for label in labels_for_doc]):
+                subtopics = []
+            else:
+                def subtopic_from_label(label):
+                    subtopic_id = label.subtopic_for(stream_id)
+                    if '|' not in subtopic_id:
+                        offset, text = ('', '')
+                    else:
+                        offset, text = subtopic_id.split('|')
+                        text = topic_id_to_query(text)
+                    subtopic = {
+                        'subtopic_id': label.subtopic_for(topic),
+                        'offset': offset,
+                        'text': text,
+                        'rating': label.rating
+                    }
+                    return subtopic
 
-            subtopics = map(subtopic_from_label, labels_for_doc)
+                subtopics = map(subtopic_from_label, labels_for_doc)
 
             feedback = {
                 'topic_id': self.topic_query.replace(' ', '_'),
