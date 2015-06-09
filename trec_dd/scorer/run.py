@@ -112,10 +112,6 @@ def main():
 
     logging.basicConfig(level=logging.DEBUG)
 
-    kvl = kvlayer.client()
-    label_store = LabelStore(kvl)
-    # config = yakonfig.get_global_config('')
-
     run = load_run(args.run)
 
     for scorer_name in args.scorers:

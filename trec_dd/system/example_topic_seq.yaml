@@ -1,0 +1,6 @@
+# Example topic sequence.
+# This topic sequence says "query topic 51 five times, then
+# query topic 59 five times."
+
+'51': 5
+'59': 5
