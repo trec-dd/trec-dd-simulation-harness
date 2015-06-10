@@ -8,6 +8,7 @@
 from __future__ import absolute_import, print_function
 
 import argparse
+from collections import defaultdict
 from dossier.label import LabelStore, Label, CorefValue
 import json
 import itertools
@@ -92,6 +93,7 @@ class Harness(object):
             if any([label.value == CorefValue.Negative
                     for label in labels_for_doc]):
                 subtopics = []
+                subtopic_data = []
             else:
                 def subtopic_from_label(label):
                     subtopic_id = label.subtopic_for(stream_id)
@@ -109,12 +111,18 @@ class Harness(object):
                     return subtopic
 
                 subtopics = map(subtopic_from_label, labels_for_doc)
-
+                subtopic_id_to_data = defaultdict(list)
+                for subtopic in subtopics:
+                    subtopic_id_to_data[subtopic['subtopic_id']].append(subtopic)
+                subtopic_data = []
+                for _, data in subtopic_id_to_data.iteritems():
+                    best = max(data, key=lambda d: d['rating'])
+                    subtopic_data.append(best)
             feedback = {
                 'topic_id': self.topic_query.replace(' ', '_'),
                 'confidence': confidence,
                 'stream_id': stream_id,
-                'subtopics': subtopics,
+                'subtopics': subtopic_data,
                 'on_topic': len(subtopics) > 0
             }
 
@@ -130,28 +138,24 @@ class Harness(object):
 
         runfile = open(self.runfile_path, 'a')
 
-        # <topic> <document-id> <on_topic> <subtopic> <rating>
-        runfile_line = '{}\t{}\t{}\t{}\t{}\t{}\n'
-
         for entry in feedback:
+            subtopic_stanza = ''
             if entry['subtopics']:
+                subtopic_tuples = []
                 for subtopic in entry['subtopics']:
-                    to_write = runfile_line.format(query_to_topic_id(entry['topic_id']),
-                                                   entry['stream_id'],
-                                                   entry['confidence'],
-                                                   entry['on_topic'],
-                                                   subtopic['subtopic_id'].replace(' ', '_'),
-                                                   subtopic['rating'])
-                    runfile.write(to_write)
-            else:
-                to_write = runfile_line.format(query_to_topic_id(entry['topic_id']),
-                                               entry['stream_id'],
-                                               entry['confidence'],
-                                               entry['on_topic'],
-                                               'null',
-                                               'null')
+                    subtopic_tuple = ':'.join([subtopic['subtopic_id'],
+                                               str(subtopic['rating'])])
+                    subtopic_tuples.append(subtopic_tuple)
+                subtopic_stanza = '|'.join(subtopic_tuples)
 
-                runfile.write(to_write)
+            # <topic> <document-id> <on_topic> <subtopic data>
+            runfile_line = '{}\t{}\t{}\t{}\t{}\n'
+            to_write = runfile_line.format(query_to_topic_id(entry['topic_id']),
+                                           entry['stream_id'],
+                                           entry['confidence'],
+                                           entry['on_topic'],
+                                           subtopic_stanza)
+            runfile.write(to_write)
 
         runfile.close()
 

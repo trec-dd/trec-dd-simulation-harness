@@ -41,34 +41,62 @@ def make_full_doc_id(doc_id, offset_start, offset_end):
     offset_string = ','.join([offset_start, offset_end])
     return '#'.join([doc_id, offset_string])
 
-def make_subtopic(offset_start, offset_end):
-    return ','.join([offset_start, offset_end])
+def make_offset_string(offset_start, offset_end):
+    '''Create an offset string from a pair of offsets.
+
+    We concat the hex representation of the offsets with
+    a comma.
+
+    :param offset_start: str
+    :param offset_end: str
+    '''
+    try:
+        offset_start_str = hex(int(offset_start))[2:]
+        offset_end_str = hex(int(offset_end))[2:]
+    except ValueError:
+        offset_start_str = ''
+        offset_end_str = ''
+
+    return ','.join([offset_start_str, offset_end_str])
 
 def label_from_runfile_line(line_data):
-    # content_id1, content_id2, subtopic_id1, subtopic_id2, annotator, value
+    '''Create a label from a *parsed* runfile line.
+
+    :param line_data: dict
+    '''
     # document data
     doc_id = line_data['docno']
-    offset_str = make_subtopic(line_data['offset_start'],
-                               line_data['offset_end'])
+    offset_str = make_offset_string(line_data['offset_start'],
+                                    line_data['offset_end'])
 
     # annotation data
     topic = line_data['topic_id']
-    print topic
     subtopic = line_data['subtopic_id']
     annotator = line_data['userid']
 
-    # meta data
+    # value data
+    value = CorefValue.Positive
     try:
         rating = int(line_data['grade'])
     except ValueError:
         rating = 0
 
     if rating < 0:
+        value = CorefValue.Negative
         rating = 0
 
-    label = Label(topic, doc_id, annotator, CorefValue.Positive,
+    # meta data
+    meta = {'domain_name': line_data['domain_name'],
+            'domain_id': line_data['domain_id'],
+            'username': line_data['username'],
+            'topic_name': line_data['topic_name'],
+            'topic_id': line_data['topic_id'],
+            'subtopic_name': line_data['subtopic_name'],
+            'passage_text': line_data['passage_name']}
+
+    label = Label(topic, doc_id, annotator, value,
                   subtopic_id1=subtopic, subtopic_id2=offset_str,
-                  rating=rating)
+                  rating=rating, meta=meta)
     return label
 
 def strip_iter(fh):
@@ -100,11 +128,13 @@ def main():
 
     csv_reader.next() # skip first line which is a header.
 
+    num_labels = 0
     for line in csv_reader:
-        print 'visiting line.'
         line_data = parse_line(line)
         label = label_from_runfile_line(line_data)
         label_store.put(label)
+        num_labels += 1
+        print 'Converted %d labels.' % num_labels
 
 if __name__ == '__main__':
     main()

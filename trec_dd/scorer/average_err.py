@@ -56,7 +56,6 @@ def average_err(run, label_store, mean_type='arithmetic', relevance_metric='grad
 
     ## score for each topic
     for topic_id, results in run['results'].items():
-        
         ## get all subtopics for the topic
         subtopic_ids = list(set(get_all_subtopics(label_store, topic_id)))
 
