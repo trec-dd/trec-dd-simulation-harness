@@ -28,7 +28,7 @@ trec_dd/system/example\_topic\_seq.py.
 You can run the random recommender system in the simulation harness by
 calling
 
-    python random\_system.py path/to/topic\_sequence.yaml path/to/truth\_data.kvl path/to/runfile\_out.runfile
+    python random_system.py path/to/topic_sequence.yaml path/to/truth_data.kvl path/to/runfile_out.runfile
 
 After this command executes, you should find the resulting system
 runfile at the path you specified in the command. The runfile summarizes
