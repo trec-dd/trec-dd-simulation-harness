@@ -92,8 +92,7 @@ class Harness(object):
             # from the labels and call the document on-topic.
             if any([label.value == CorefValue.Negative
                     for label in labels_for_doc]):
-                subtopics = []
-                subtopic_data = []
+                subtopic_feedback = []
             else:
                 def subtopic_from_label(label):
                     subtopic_id = label.subtopic_for(stream_id)
@@ -110,20 +109,23 @@ class Harness(object):
                     }
                     return subtopic
 
-                subtopics = map(subtopic_from_label, labels_for_doc)
                 subtopic_id_to_data = defaultdict(list)
-                for subtopic in subtopics:
-                    subtopic_id_to_data[subtopic['subtopic_id']].append(subtopic)
-                subtopic_data = []
+                for label in labels_for_doc:
+                    subtopic_data = subtopic_from_label(label)
+                    subtopic_id = subtopic_data['subtopic_id']
+                    subtopic_id_to_data[subtopic_id].append(subtopic_data)
+
+                subtopic_feedback = []
                 for _, data in subtopic_id_to_data.iteritems():
                     best = max(data, key=lambda d: d['rating'])
-                    subtopic_data.append(best)
+                    subtopic_feedback.append(best)
+
             feedback = {
                 'topic_id': self.topic_query.replace(' ', '_'),
                 'confidence': confidence,
                 'stream_id': stream_id,
-                'subtopics': subtopic_data,
-                'on_topic': len(subtopics) > 0
+                'subtopics': subtopic_feedback,
+                'on_topic': len(subtopic_feedback) > 0
             }
 
             return feedback
