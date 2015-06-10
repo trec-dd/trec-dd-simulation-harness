@@ -72,14 +72,15 @@ def test_step(local_kvl, tmpdir):
     # Check write file
     runfile = open(runfile_path, 'r')
     for idx, line in enumerate(csv.reader(runfile, delimiter='\t')):
-        topic, doc_id, confidence, on_topic, subtopic, rating = line
+        topic, doc_id, confidence, on_topic, subtopic_data = line
         assert topic == feedback[idx]['topic_id']
         assert doc_id == feedback[idx]['stream_id']
         assert on_topic == str(feedback[idx]['on_topic'])
 
         if idx in [0, 1]:
-            assert subtopic != 'null'
-            assert rating != 'null'
+            assert subtopic_data
+            subtopic, rating = subtopic_data.split(':')
+            assert rating
+            assert subtopic
         else:
-            assert subtopic == 'null'
-            assert rating == 'null'
+            assert subtopic_data == ''
