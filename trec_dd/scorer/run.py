@@ -87,7 +87,7 @@ def main():
     parser.add_argument('--scorer', action='append', default=[],
         dest='scorers', help='names of scorer functions')
 
-    modules = [yakonfig, kvlayer]
+    modules = [yakonfig]
     args = yakonfig.parse_args(parser, modules)
 
     config = {'storage_type': 'filestorage',
