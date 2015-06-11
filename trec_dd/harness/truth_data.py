@@ -46,20 +46,10 @@ def make_full_doc_id(doc_id, offset_start, offset_end):
 def make_offset_string(offset_start, offset_end):
     '''Create an offset string from a pair of offsets.
 
-    We concat the hex representation of the offsets with
-    a comma.
-
     :param offset_start: str
     :param offset_end: str
     '''
-    try:
-        offset_start_str = hex(int(offset_start))[2:]
-        offset_end_str = hex(int(offset_end))[2:]
-    except ValueError:
-        offset_start_str = ''
-        offset_end_str = ''
-
-    return ','.join([offset_start_str, offset_end_str])
+    return ','.join([offset_start, offset_end])
 
 def label_from_truth_data_file_line(line_data):
     '''Create a label from a *parsed* truth_data_file line.
