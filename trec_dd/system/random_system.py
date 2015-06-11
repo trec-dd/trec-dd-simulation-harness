@@ -1,5 +1,8 @@
 '''Demonstrate generating a run_file using a random system.
 
+.. This software is released under an MIT/X11 open source license.
+   Copyright 2015 Diffeo, Inc.
+
 This file sets up a very silly system for evaluation. All the system
 does when given a query is return a collection of random document ids
 from a set of known document ids.
@@ -16,6 +19,7 @@ import argparse
 from collections import defaultdict
 from dossier.label import LabelStore
 import kvlayer
+import logging
 import random
 import yaml
 
@@ -23,6 +27,7 @@ from trec_dd.harness.run import Harness
 from trec_dd.harness.truth_data import parse_truth_data
 from trec_dd.system.ambassador import HarnessAmbassador
 
+logger = logging.getLogger(__name__)
 
 class RandomSystem(object):
     '''A ranking system that returns a random document id.
@@ -35,7 +40,7 @@ class RandomSystem(object):
         '''Select 5 random documents.
         '''
         doc_ids = list(self.doc_store.scan_ids(topic_id))
-        rand_docs = random.sample(doc_ids, 5)
+        rand_docs = random.sample(doc_ids, min(len(doc_ids), 5))
         confidences = [random.random() for _ in xrange(5)]
         return zip(rand_docs, confidences)
 
@@ -70,6 +75,8 @@ def main():
     parser.add_argument('truth_data_path', help='path to truth data.')
     parser.add_argument('run_file_path', help='path to output a run file.')
     args = parser.parse_args()
+
+    logging.basicConfig(level=logging.DEBUG)
 
     kvl_config = {'storage_type': 'local',
                   'namespace': 'test',
@@ -106,14 +113,14 @@ def main():
 
     # Run through the topic sequence, controlling the ambassador.
     for topic, num_iterations in topic_sequence.iteritems():
-        print 'Evaluating topic %s' % topic
+        logger.info('Evaluating topic %s' % topic)
         ambassador.start(topic)
         for _ in xrange(num_iterations):
             ambassador.step()
-        print 'Stopping topic %s' % topic
+        logger.info('Stopping topic %s' % topic)
         ambassador.stop()
 
-    print 'Finished. Please find run_file at %s' % args.run_file_path
+    logger.info('Finished. Please find run_file at %s' % args.run_file_path)
 
 if __name__ == '__main__':
     main()
