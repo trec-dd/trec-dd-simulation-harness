@@ -22,13 +22,13 @@ line. Please see trec_dd/harness for more information.
 Once you have a "runfile", you may then score your run. Please
 see the section "Gathering Scores" for more information.
 
-# Example Recommender Systems
+# Example TREC DD Systems
 
-The directory trec\_dd/system holds example recommender systems to
+The directory trec\_dd/system holds example TREC DD systems to
 demonstrate interaction with the simulation harness using a TREC DD
 system. Right now, the only example system is random_system.py.
 
-# Executing the Random Recommender System
+# Executing the Random System
 
 ## Requirements
 
@@ -49,7 +49,7 @@ trec_dd/system/example\_topic\_seq.py.
 
 ## Running the System
 
-You can run the random recommender system in the simulation harness by
+You can run the random system in the simulation harness by
 calling
 
     python random_system.py path/to/topic_sequence.yaml path/to/truth_data.kvl path/to/runfile_out.runfile
