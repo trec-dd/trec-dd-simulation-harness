@@ -10,10 +10,10 @@ class HarnessAmbassador(object):
     '''Facilitates the communication between a Harness and a System.
     '''
 
-    def __init__(self, system, truth_data, runfile_path=None):
+    def __init__(self, system, truth_data, run_file_path=None):
         self.system = system
         self.truth_data = truth_data
-        self.runfile_path = runfile_path
+        self.run_file_path = run_file_path
 
         self.num_steps = 0
 
@@ -61,4 +61,4 @@ class HarnessAmbassador(object):
     def make_harness(self, topic_id):
         return Harness(topic_id,
                        self.truth_data,
-                       self.runfile_path)
+                       self.run_file_path)

@@ -9,10 +9,12 @@ truth data the harness understands.
 from __future__ import absolute_import
 import argparse
 import csv
+import logging
 
 from dossier.label import Label, LabelStore, CorefValue
 import kvlayer
 
+logger = logging.getLogger(__name__)
 
 def parse_line(line):
     '''Given a csv line, return a dict.
@@ -122,7 +124,7 @@ def parse_truth_data(label_store, truth_data_path):
         label = label_from_truth_data_file_line(line_data)
         label_store.put(label)
         num_labels += 1
-        print('Converted %d labels.' % num_labels)
+        logger.debug('Converted %d labels.' % num_labels)
 
 def main():
     parser = argparse.ArgumentParser('test tool for checking that we can load '
@@ -130,14 +132,14 @@ def main():
                                      'TREC 2015')
     parser.add_argument('truth_data_path', help='path to truth data file')
     args = parser.parse_args()
-
+    logging.basicConfig(level=logging.DEBUG)
     kvl_config = {'storage_type': 'local',
                   'namespace': 'test',
                   'app_name': 'test'}
     kvl = kvlayer.client(kvl_config)
     label_store = LabelStore(kvl)
     parse_truth_data(label_store, args.truth_data_path)
-    print('Done!  The data was loaded into memory, and worked, and now we are exiting.')
+    logger.debug('Done!  The data was loaded into memory, and worked, and now we are exiting.')
 
 if __name__ == '__main__':
     main()

@@ -1,4 +1,4 @@
-'''Demonstrate generating a runfile using a random system.
+'''Demonstrate generating a run_file using a random system.
 
 This file sets up a very silly system for evaluation. All the system
 does when given a query is return a collection of random document ids
@@ -19,6 +19,7 @@ import random
 import yaml
 
 from trec_dd.harness.run import Harness
+from trec_dd.harness.truth_data import parse_truth_data
 from trec_dd.system.ambassador import HarnessAmbassador
 
 
@@ -65,20 +66,22 @@ def main():
     '''
     description = 'Run the random recommender system on a sequence of topics.'
     parser = argparse.ArgumentParser(description=description)
-    parser.add_argument('topic_sequence',
-                        help='path to file describing which topics to evaluate.')
-    parser.add_argument('truth_data', help='path to truth data.')
-    parser.add_argument('runfile_path', help='path to output runfile.')
+    parser.add_argument('truth_data_path', help='path to truth data.')
+    parser.add_argument('run_file_path', help='path to output a run file.')
     args = parser.parse_args()
 
-    kvl_config = {'storage_type': 'filestorage',
-                  'filename': args.truth_data,
+    kvl_config = {'storage_type': 'local',
                   'namespace': 'test',
                   'app_name': 'test'}
     kvl = kvlayer.client(kvl_config)
     label_store = LabelStore(kvl)
 
-    topic_sequence = yaml.load(open(args.topic_sequence))
+    parse_truth_data(label_store, args.truth_data_path)
+
+    all_topics = set()
+    for label in label_store.everything():
+        all_topics.add(label.meta['topic_id'])
+    topic_sequence = dict([(topic, 5) for topic in all_topics])
 
     # build a silly document store. This store will just have
     # documents corresponding to the topic ids specified within
@@ -96,7 +99,7 @@ def main():
     # Set up the system and ambassador.
     system = RandomSystem(doc_store)
     ambassador = HarnessAmbassador(system, label_store,
-                                   runfile_path=args.runfile_path)
+                                   run_file_path=args.run_file_path)
 
     # Run through the topic sequence, controlling the ambassador.
     for topic, num_iterations in topic_sequence.iteritems():
@@ -107,7 +110,7 @@ def main():
         print 'Stopping topic %s' % topic
         ambassador.stop()
 
-    print 'Finished. Please find runfile at %s' % args.runfile_path
+    print 'Finished. Please find run_file at %s' % args.run_file_path
 
 if __name__ == '__main__':
     main()

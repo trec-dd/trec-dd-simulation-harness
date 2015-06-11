@@ -32,15 +32,15 @@ def topic_id_to_query(topic_id):
 
 class Harness(object):
 
-    def __init__(self, topic_query, label_store, runfile_path=None):
-        self.runfile_path = runfile_path
+    def __init__(self, topic_query, label_store, run_file_path=None):
+        self.run_file_path = run_file_path
         self.label_store = label_store
         self.topic_query = topic_query
 
     config_name = 'harness'
 
     default_config = {
-        'runfile_path': 'runfile.txt',
+        'run_file_path': 'run_file.txt',
         'topic': None,
         'batch_size': 5
     }
@@ -49,7 +49,7 @@ class Harness(object):
     # line.
     runtime_keys = {
         'topic': 'topic',
-        'runfile_path': 'runfile_path',
+        'run_file_path': 'run_file_path',
         'batch_size': 'batch_size'
     }
 
@@ -57,8 +57,8 @@ class Harness(object):
     def add_arguments(parser):
         parser.add_argument('--topic',
                             help='topic on which to work')
-        parser.add_argument('--runfile-path', type=str,
-                            help='where to write runfile')
+        parser.add_argument('--run_file-path', type=str,
+                            help='where to write run_file')
         parser.add_argument('--batch_size', type=int,
                             help='number of results per batch')
 
@@ -131,14 +131,14 @@ class Harness(object):
             return feedback
 
         all_feedback = map(feedback_for_result, results)
-        self.write_feedback_to_runfile(all_feedback)
+        self.write_feedback_to_run_file(all_feedback)
         return all_feedback
 
-    def write_feedback_to_runfile(self, feedback):
-        if self.runfile_path is None:
+    def write_feedback_to_run_file(self, feedback):
+        if self.run_file_path is None:
             return
 
-        runfile = open(self.runfile_path, 'a')
+        run_file = open(self.run_file_path, 'a')
 
         for entry in feedback:
             subtopic_stanza = ''
@@ -151,15 +151,15 @@ class Harness(object):
                 subtopic_stanza = '|'.join(subtopic_tuples)
 
             # <topic> <document-id> <on_topic> <subtopic data>
-            runfile_line = '{}\t{}\t{}\t{}\t{}\n'
-            to_write = runfile_line.format(query_to_topic_id(entry['topic_id']),
+            run_file_line = '{}\t{}\t{}\t{}\t{}\n'
+            to_write = run_file_line.format(query_to_topic_id(entry['topic_id']),
                                            entry['stream_id'],
                                            entry['confidence'],
                                            entry['on_topic'],
                                            subtopic_stanza)
-            runfile.write(to_write)
+            run_file.write(to_write)
 
-        runfile.close()
+        run_file.close()
 
 def main():
     parser = argparse.ArgumentParser(__doc__,
@@ -179,7 +179,7 @@ def main():
     kvl = kvlayer.client()
     label_store = LabelStore(kvl)
     config = yakonfig.get_global_config('harness')
-    harness = Harness(config['topic'], config['runfile_path'], label_store)
+    harness = Harness(config['topic'], config['run_file_path'], label_store)
 
     if args.command == 'start':
         result = harness.start()

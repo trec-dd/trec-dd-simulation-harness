@@ -1,4 +1,4 @@
-'''trec_dd.harness.run provides an evaluation jig for TREC Dynamic Domain systems
+'''evaluation jig for TREC Dynamic Domain systems
 
 .. This software is released under an MIT/X11 open source license.
    Copyright 2015 Diffeo, Inc.
@@ -16,6 +16,7 @@ import logging
 import sys
 import yakonfig
 
+from trec_dd.harness.truth_data import parse_truth_data
 from trec_dd.scorer import available_scorers
 
 
@@ -82,24 +83,31 @@ where subtopics is a list of two-tuples of (subtopic_id, rating)
 def main():
     parser = argparse.ArgumentParser(__doc__,
                                      conflict_handler='resolve')
-    parser.add_argument('runfile_path', help='path to runfile to score.')
-    parser.add_argument('truthdata_path', help='path to truthdata.')
+    parser.add_argument('truth_data_path', help='path to truthdata.')
+    parser.add_argument('run_file_path', help='path to run file to score.')
+    parser.add_argument('--verbose', action='store_true', default=False,
+                        help='display verbose log messages.')
     parser.add_argument('--scorer', action='append', default=[],
         dest='scorers', help='names of scorer functions')
 
     modules = [yakonfig]
     args = yakonfig.parse_args(parser, modules)
 
-    config = {'storage_type': 'filestorage',
-              'filename': args.truthdata_path,
+    if args.verbose:
+        level = logging.DEBUG
+    else:
+        level = logging.INFO
+    logging.basicConfig(level=level)
+
+    config = {'storage_type': 'local',
               'namespace': 'test',
               'app_name': 'test'}
     kvl = kvlayer.client(config)
     label_store = LabelStore(kvl)
 
-    logging.basicConfig(level=logging.DEBUG)
+    parse_truth_data(label_store, args.truth_data_path)
 
-    run = load_run(args.runfile_path)
+    run = load_run(args.run_file_path)
 
     for scorer_name in args.scorers:
         scorer = available_scorers.get(scorer_name)
