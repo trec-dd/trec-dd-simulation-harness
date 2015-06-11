@@ -7,7 +7,7 @@ TREC DD system during an interactive query session.
 
 To evaluate an example "random" system (see "Example TREC DD Systems"):
 
-    python -m trec_dd.system.random_system truth_data.csv run_file.csv
+    python -m trec_dd.system.random_system truth_data.csv run_file_out.csv
 
 To score a runfile (see "Scoring the System"):
 
@@ -51,7 +51,7 @@ To run the example systems, you must have a truth data csv file.
 You can run the random system in the simulation harness by
 calling
 
-    python random_system.py path/to/truth_data.csv path/to/runfile_out.runfile
+    python -m trec_dd.system.random_system. truth_data.csv runfile_out.csv
 
 After this command executes, you should find the resulting system
 runfile at the path you specified in the command. The runfile summarizes
@@ -63,7 +63,7 @@ know in order to give a system a score.
 
 To score your runfile, you may use the trec_dd/scorer/run.py script.
 
-    python trec_dd/scorer/run.py path/to/runfile path/to/truthdata.kvl --scorer scorer1 scorer2 scorer3 ...
+    trec_dd_scorer run_file.csv truth_data.csv --scorer scorer1 scorer2 scorer3 ...
 
 Please see the section titled "Gathering Scores" for more information on the scoring
 subsystem.
@@ -81,7 +81,7 @@ when generating the runfile.
 The top-level scoring script trec\_dd/scorer/run.py is used to generate
 scores. To run it:
 
-    python run.py path/to/runfile path/to/truth_data.csv --scorer scorer1 scorer2 ...
+    trec_dd_scorer run_file.csv truth_data.csv --scorer scorer1 scorer2 ...
 
 This will go through your runfile and use all of the specified scorers to
 evaluate the run of your system. The scorers specified after the --scorer
