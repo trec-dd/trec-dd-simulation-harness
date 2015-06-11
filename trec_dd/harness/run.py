@@ -96,11 +96,8 @@ class Harness(object):
             else:
                 def subtopic_from_label(label):
                     subtopic_id = label.subtopic_for(stream_id)
-                    if '|' not in subtopic_id:
-                        offset, text = ('', '')
-                    else:
-                        offset, text = subtopic_id.split('|')
-                        text = topic_id_to_query(text)
+                    offset = subtopic_id
+                    text = label.meta['passage_text']
                     subtopic = {
                         'subtopic_id': label.subtopic_for(topic),
                         'offset': offset,
@@ -153,10 +150,10 @@ class Harness(object):
             # <topic> <document-id> <on_topic> <subtopic data>
             run_file_line = '{}\t{}\t{}\t{}\t{}\n'
             to_write = run_file_line.format(query_to_topic_id(entry['topic_id']),
-                                           entry['stream_id'],
-                                           entry['confidence'],
-                                           entry['on_topic'],
-                                           subtopic_stanza)
+                                            entry['stream_id'],
+                                            entry['confidence'],
+                                            entry['on_topic'],
+                                            subtopic_stanza)
             run_file.write(to_write)
 
         run_file.close()
