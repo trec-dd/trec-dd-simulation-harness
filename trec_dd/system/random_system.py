@@ -13,6 +13,7 @@ Harness's python interface for simplicity.
 from __future__ import absolute_import
 
 import argparse
+from collections import defaultdict
 from dossier.label import LabelStore
 import kvlayer
 import random
@@ -33,7 +34,7 @@ class RandomSystem(object):
     def search(self, topic_id):
         '''Select 5 random documents.
         '''
-        doc_ids = list(self.doc_store.scan_ids())
+        doc_ids = list(self.doc_store.scan_ids(topic_id))
         rand_docs = random.sample(doc_ids, 5)
         confidences = [random.random() for _ in xrange(5)]
         return zip(rand_docs, confidences)
@@ -51,13 +52,13 @@ class StubDocumentStore(object):
     of document ids stored in memory.
     '''
 
-    def __init__(self, doc_ids):
-        self.doc_ids = doc_ids
+    def __init__(self, topic_id_to_doc_ids):
+        self.topic_id_to_doc_ids = topic_id_to_doc_ids
 
-    def scan_ids(self):
+    def scan_ids(self, topic_id):
         '''Just iterate over doc ids in memory.
         '''
-        for doc_id in self.doc_ids:
+        for doc_id in self.topic_id_to_doc_ids[topic_id]:
             yield doc_id
 
 
@@ -86,15 +87,17 @@ def main():
     # build a silly document store. This store will just have
     # documents corresponding to the topic ids specified within
     # the topic sequence.
-    doc_ids = []
+    topic_id_to_doc_ids = defaultdict(list)
     for label in label_store.everything():
         if label.content_id1 in topic_sequence:
             doc_id = label.content_id2
-            doc_ids.append(doc_id)
+            topic_id = label.content_id1
+            topic_id_to_doc_ids[topic_id].append(doc_id)
         elif label.content_id2 in topic_sequence:
             doc_id = label.content_id1
-            doc_ids.append(doc_id)
-    doc_store = StubDocumentStore(doc_ids)
+            topic_id = label.content_id2
+            topic_id_to_doc_ids[topic_id].append(doc_id)
+    doc_store = StubDocumentStore(topic_id_to_doc_ids)
 
     # Set up the system and ambassador.
     system = RandomSystem(doc_store)
