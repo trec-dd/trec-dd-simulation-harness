@@ -5,6 +5,7 @@
 '''
 
 from __future__ import absolute_import
+import json
 import logging
 
 from trec_dd.harness.run import Harness
@@ -59,7 +60,7 @@ class HarnessAmbassador(object):
         results = self.system.search(self.curr_topic)
         feedback = self.harness.step(results)
         self.system.process_feedback(feedback)
-        logger.info(feedback)
+        logger.info(json.dumps(feedback, indent=4, sort_keys=True))
         self.num_steps += 1
         return feedback
 
