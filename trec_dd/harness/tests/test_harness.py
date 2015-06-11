@@ -41,14 +41,14 @@ def build_test_data(kvl):
 
 def test_start(local_kvl):
     label_store = LabelStore(local_kvl)
-    harness = Harness('topic1', label_store, runfile_path='some_path.txt')
+    harness = Harness('topic1', label_store, run_file_path='some_path.txt')
     harness.start()
 
 
 def test_step(local_kvl, tmpdir):
-    runfile_path = os.path.join(str(tmpdir), 'runfile.txt')
+    run_file_path = os.path.join(str(tmpdir), 'runfile.txt')
     label_store = LabelStore(local_kvl)
-    harness = Harness('topic1', label_store, runfile_path=runfile_path)
+    harness = Harness('topic1', label_store, run_file_path=run_file_path)
     results = [('doc02', 244), ('doc01', 100), ('doc12', 999),
                ('doc22', 445), ('doc11', 773)]
     feedback = harness.step(results)
@@ -70,8 +70,8 @@ def test_step(local_kvl, tmpdir):
     assert len(feedback[4]['subtopics']) == 0
 
     # Check write file
-    runfile = open(runfile_path, 'r')
-    for idx, line in enumerate(csv.reader(runfile, delimiter='\t')):
+    run_file = open(run_file_path, 'r')
+    for idx, line in enumerate(csv.reader(run_file, delimiter='\t')):
         topic, doc_id, confidence, on_topic, subtopic_data = line
         assert topic == feedback[idx]['topic_id']
         assert doc_id == feedback[idx]['stream_id']
