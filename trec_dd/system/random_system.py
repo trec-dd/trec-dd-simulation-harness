@@ -98,10 +98,16 @@ def main():
     for label in label_store.everything():
         if label.content_id1 in topic_sequence:
             doc_id = label.content_id2
+            if not doc_id.strip(): 
+                logger.warn('skipping bogus document identifer: %r' % doc_id)
+                continue
             topic_id = label.content_id1
             topic_id_to_doc_ids[topic_id].append(doc_id)
         elif label.content_id2 in topic_sequence:
             doc_id = label.content_id1
+            if not doc_id.strip(): 
+                logger.warn('skipping bogus document identifer: %r' % doc_id)
+                continue
             topic_id = label.content_id2
             topic_id_to_doc_ids[topic_id].append(doc_id)
     doc_store = StubDocumentStore(topic_id_to_doc_ids)

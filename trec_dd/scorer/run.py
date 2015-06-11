@@ -28,9 +28,10 @@ def load_run(run_file_path):
 validity, and returning a dictionary keyed on topic_id with values
 that are dictionaries of
 
-    batch_num, rank, stream_id, confidence, on_topic, subtopics
+    topic_id, stream_id, confidence, on_topic, subtopics
 
-where subtopics is a list of two-tuples of (subtopic_id, rating)
+where subtopics is a pipe-delimited list of colon-delimited two-tuples
+of (subtopic_id, rating)
 
     '''
     fh = open(run_file_path)
@@ -44,11 +45,15 @@ where subtopics is a list of two-tuples of (subtopic_id, rating)
     for line in fh:
         if line.startswith('#'): continue
         parts = line.split()
-        if len(parts) == 4:
-            parts.append('')
+        if len(parts) != 5:
+            sys.exit('Your run file is invalid, because line '
+                     '%d has %d parts instead of 5' 
+                     % (line_idx, len(parts)))
+
         topic_id, stream_id, confidence, on_topic, subtopics_and_ratings = parts
-        on_topic = on_topic == 'True'
+        on_topic = bool(int(on_topic))
         confidence = float(confidence)
+
         if prev_topic_id is None: prev_topic_id = topic_id
         if prev_topic_id != topic_id:
             ## switching to a new topic!!!
@@ -62,7 +67,7 @@ where subtopics is a list of two-tuples of (subtopic_id, rating)
                 prev_batch_num = None
 
         subtopics = []
-        if not subtopics_and_ratings:
+        if subtopics_and_ratings == 'NULL':
             assert on_topic is False, (line, subtopics_and_ratings)
 
         else:

@@ -77,8 +77,15 @@ class Harness(object):
         logger.info("Stopping topic: '%s'", self.topic_query)
 
     def step(self, results):
-        def feedback_for_result(result):
+        def feedback_for_result(result):            
             stream_id, confidence = result
+            if len(stream_id.strip()) == 0:
+                sys.exit('Your system submitted a bogus document identifier: %r' % stream_id)
+            try:
+                assert 0 <= float(confidence) <= 1
+            except:
+                sys.exit('Your system submitted a bogus confidence value: %r' % confidence)
+
             topic = query_to_topic_id(self.topic_query)
             labels_for_doc = self.label_store.directly_connected(stream_id)
             labels_for_doc = filter(lambda l: l.other(stream_id) == topic,
@@ -127,7 +134,7 @@ class Harness(object):
                 'confidence': confidence,
                 'stream_id': stream_id,
                 'subtopics': subtopic_feedback,
-                'on_topic': len(subtopic_feedback) > 0
+                'on_topic': int(bool(len(subtopic_feedback) > 0))
             }
 
             return feedback
@@ -143,7 +150,7 @@ class Harness(object):
         run_file = open(self.run_file_path, 'a')
 
         for entry in feedback:
-            subtopic_stanza = ''
+            subtopic_stanza = 'NULL'
             if entry['subtopics']:
                 subtopic_tuples = []
                 for subtopic in entry['subtopics']:
@@ -159,6 +166,9 @@ class Harness(object):
                                             entry['confidence'],
                                             entry['on_topic'],
                                             subtopic_stanza)
+
+            assert len(run_file_line.split()) == 5
+
             run_file.write(to_write)
 
         run_file.close()

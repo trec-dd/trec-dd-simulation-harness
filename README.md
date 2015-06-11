@@ -11,7 +11,7 @@ To evaluate an example "random" system (see "Example TREC DD Systems"):
 
 To score a runfile (see "Scoring the System"):
 
-    trec_dd_score run_file.csv truth_data.csv --scorer scorer1 scorer2 ..
+    trec_dd_scorer truth_data.csv run_file_in.csv --scorer scorer1 scorer2 ..
    
 
 # Simulation Harness
