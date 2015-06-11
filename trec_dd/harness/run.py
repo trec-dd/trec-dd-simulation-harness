@@ -97,7 +97,7 @@ class Harness(object):
                 def subtopic_from_label(label):
                     subtopic_id = label.subtopic_for(stream_id)
                     offset = subtopic_id
-                    text = label.meta['passage_text']
+                    text = label.meta.get('passage_text', '')
                     subtopic = {
                         'subtopic_id': label.subtopic_for(topic),
                         'offset': offset,
