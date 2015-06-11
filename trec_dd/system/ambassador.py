@@ -7,6 +7,7 @@
 from __future__ import absolute_import
 import json
 import logging
+import time
 
 from trec_dd.harness.run import Harness
 
@@ -25,6 +26,11 @@ class HarnessAmbassador(object):
 
         self.harness = None
         self.curr_topic = None
+
+        self.search_elapsed = 0
+        self.feedback_elapsed = 0
+        self.process_elapsed = 0
+        self.total_start = time.time()
 
     def start(self, topic_id):
         '''Start harness evaluation on a given topic.
@@ -48,6 +54,12 @@ class HarnessAmbassador(object):
         self.curr_topic = None
         self.num_steps = 0
 
+        total_elapsed = time.time() - self.total_start
+        logger.info('%.1f seconds spent so far, %.1f in search, %.1f in '
+                    'generating feedback, %.1f in processing feedback',
+                    total_elapsed, self.search_elapsed, 
+                    self.feedback_elapsed, self.process_elapsed)
+
     def step(self):
         '''Go through one iteration of harness evaluation.
 
@@ -57,9 +69,19 @@ class HarnessAmbassador(object):
         to the system.
         '''
         logger.info('Doing step %d for topic %s' % (self.num_steps, self.curr_topic))
+
+        start_time = time.time()
         results = self.system.search(self.curr_topic)
+        self.search_elapsed += time.time() - start_time
+
+        start_time = time.time()
         feedback = self.harness.step(results)
+        self.feedback_elapsed += time.time() - start_time
+
+        start_time = time.time()
         self.system.process_feedback(feedback)
+        self.process_elapsed += time.time() - start_time
+
         logger.info(json.dumps(feedback, indent=4, sort_keys=True))
         self.num_steps += 1
         return feedback
