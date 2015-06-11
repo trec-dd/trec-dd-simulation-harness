@@ -1,8 +1,8 @@
-'''Generate truth data from a runfile.
+'''Generate truth data from a truth_data_file.
 
-A runfile may be produced by a human being, so sometimes
+A truth_data_file may be produced by a human being, so sometimes
 it should be considered truth data. This file provides
-utilities for turning a runfile of a certain format into
+utilities for turning a truth_data_file of a certain format into
 truth data the harness understands.
 '''
 
@@ -59,8 +59,8 @@ def make_offset_string(offset_start, offset_end):
 
     return ','.join([offset_start_str, offset_end_str])
 
-def label_from_runfile_line(line_data):
-    '''Create a label from a *parsed* runfile line.
+def label_from_truth_data_file_line(line_data):
+    '''Create a label from a *parsed* truth_data_file line.
 
     :param line_data: dict
     '''
@@ -108,33 +108,36 @@ def strip_iter(fh):
         stripped = stripped.replace('\n', '')
         yield stripped
 
-def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument('runfile', help='path to runfile')
-    parser.add_argument('labels_out', help='path to labels output file')
-    args = parser.parse_args()
-
-    kvl_config = {'storage_type': 'filestorage',
-                  'filename': args.labels_out,
-                  'namespace': 'test',
-                  'app_name': 'test'}
-    kvl = kvlayer.client(kvl_config)
-    label_store = LabelStore(kvl)
-
-    runfile_path = args.runfile
-    runfile = open(runfile_path, 'r')
-    runfile = strip_iter(runfile)
-    csv_reader = csv.reader(runfile)
+def parse_truth_data(label_store, truth_data_path):
+    data = open(truth_data_path, 'r')
+    # cleanse the nasty Window's characters
+    data = strip_iter(data)
+    csv_reader = csv.reader(data)
 
     csv_reader.next() # skip first line which is a header.
 
     num_labels = 0
     for line in csv_reader:
         line_data = parse_line(line)
-        label = label_from_runfile_line(line_data)
+        label = label_from_truth_data_file_line(line_data)
         label_store.put(label)
         num_labels += 1
-        print 'Converted %d labels.' % num_labels
+        print('Converted %d labels.' % num_labels)
+
+def main():
+    parser = argparse.ArgumentParser('test tool for checking that we can load '
+                                     'the truth data as distributed by NIST for '
+                                     'TREC 2015')
+    parser.add_argument('truth_data_path', help='path to truth data file')
+    args = parser.parse_args()
+
+    kvl_config = {'storage_type': 'local',
+                  'namespace': 'test',
+                  'app_name': 'test'}
+    kvl = kvlayer.client(kvl_config)
+    label_store = LabelStore(kvl)
+    parse_truth_data(label_store, args.truth_data_path)
+    print('Done!  The data was loaded into memory, and worked, and now we are exiting.')
 
 if __name__ == '__main__':
     main()
