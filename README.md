@@ -7,13 +7,13 @@ TREC DD system during an interactive query session.
 
 To score a runfile (see "Scoring the System"):
 
-    trec_dd_scorer truth_data.csv run_file_in.txt
+    trec_dd_scorer truth_data.csv run_file_in.txt run_file_scored.json > pretty_table.txt 2> log.txt &
 
 
 This repository also provides a baseline system that randomizes
 subtopic ordering (see "Example TREC DD Systems"):
 
-    trec_dd_random_system truth_data.csv run_file_out.txt
+    trec_dd_random_system truth_data.csv run_file_out.txt &> log.txt &
 
 The scores for this baseline system using an early version of the TREC
 DD truth data are:
