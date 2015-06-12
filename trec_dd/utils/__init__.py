@@ -30,13 +30,13 @@ def get_all_subtopics(label_store, topic_id):
 
 
 def get_best_subtopics(subtopic_pairs):
-'''Return the instance of each subtopic with the highest rating.
-'''
-sid_to_data = defaultdict(list)
-for subtopic, conf in subtopic_pairs:
-    sid_to_data[subtopic].append((subtopic, conf))
-subtopics = []
-for sid, data in sid_to_data.iteritems():
-    best = max(data, key=lambda d: d[1])
-    subtopics.append(best)
-return subtopics
+    '''Return the instance of each subtopic with the highest rating.
+    '''
+    sid_to_data = defaultdict(list)
+    for subtopic, conf in subtopic_pairs:
+        sid_to_data[subtopic].append((subtopic, conf))
+    subtopics = []
+    for sid, data in sid_to_data.iteritems():
+        best = max(data, key=lambda d: d[1])
+        subtopics.append(best)
+    return subtopics

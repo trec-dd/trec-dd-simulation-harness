@@ -41,12 +41,13 @@ def precision_at_recall(run, label_store):
             result_subtopics = \
                 {subtopic for subtopic, conf in get_best_subtopics(result['subtopics'])}
 
-            if not result_subtopics.issubset(seen_subtopics): 
+            if result['on_topic']:
                 relevant_docs += 1
 
             seen_subtopics.update(result_subtopics)
             if len(seen_subtopics) == len(subtopic_ids):
                 break
+
         ## precision is number of documents relevant at stopping point
         p = relevant_docs/(idx + 1)
         scores_by_topic[topic_id] = p
