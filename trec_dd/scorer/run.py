@@ -13,6 +13,7 @@ from collections import defaultdict
 import json
 import kvlayer
 import logging
+import os
 import sys
 import yakonfig
 
@@ -85,18 +86,40 @@ of (subtopic_id, rating)
     return results_by_topic
 
 
+row = '%(macro_average).3f\t%(scorer_name)s'
+def format_scores(run):
+    parts = []
+    for scorer_name, rec in sorted(run['scores'].items()):
+        _rec = dict(scorer_name=scorer_name)
+        _rec.update(rec)
+        parts.append(row % _rec)
+    return '\n'.join(parts)
+
+
 def main():
     parser = argparse.ArgumentParser(__doc__,
                                      conflict_handler='resolve')
     parser.add_argument('truth_data_path', help='path to truthdata.')
     parser.add_argument('run_file_path', help='path to run file to score.')
+    parser.add_argument('scored_run_file_output_path',
+                        help='path to file to create with scores inserted'
+                        'into run file.')
+    parser.add_argument('--overwrite', action='store_true', default=False,
+                        help='overwrite any existing run file.')
     parser.add_argument('--verbose', action='store_true', default=False,
                         help='display verbose log messages.')
     parser.add_argument('--scorer', action='append', default=[],
-        dest='scorers', help='names of scorer functions')
+        dest='scorers', help='names of scorer functions to run;'
+                        ' if none are provided, it runs all of them')
 
     modules = [yakonfig]
     args = yakonfig.parse_args(parser, modules)
+
+    if os.path.exists(args.scored_run_file_output_path):
+        if args.overwrite:
+            os.remove(args.scored_run_file_output_path)
+        else:
+            sys.exit('%r already exists' % args.scored_run_file_output_path)
 
     if args.verbose:
         level = logging.DEBUG
@@ -114,11 +137,19 @@ def main():
 
     run = load_run(args.run_file_path)
 
+    if len(args.scorers) == 0:
+        args.scorers = available_scorers.keys()
+
     for scorer_name in args.scorers:
         scorer = available_scorers.get(scorer_name)
+        logger.info('running %s', scorer_name)
+        # this modifies the run['scores'] object itself
         scorer(run, label_store)
 
-    print(json.dumps(run, indent=4))
+    print(format_scores(run))
+
+    open(args.scored_run_file_output_path, 'wb').\
+        write(json.dumps(run, indent=4))
 
 
 if __name__ == '__main__':
