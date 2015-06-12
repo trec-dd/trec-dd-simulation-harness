@@ -10,6 +10,7 @@ from __future__ import absolute_import
 import argparse
 import csv
 import logging
+import sys
 
 from dossier.label import Label, LabelStore, CorefValue
 import kvlayer
@@ -58,6 +59,43 @@ def label_from_truth_data_file_line(line_data):
     '''
     # document data
     doc_id = line_data['docno']
+    if not doc_id.strip():
+        logger.warn('dropping invalid truth data line: '
+                    'bad docno: %r: %r'
+                    % (doc_id, line_data))
+        return None
+    if not (line_data['offset_start'].strip() and
+            line_data['offset_end'].strip()):
+        logger.warn('dropping invalid truth data line: '
+                    'bad offsets %r,%r: %r'
+                    % (line_data['offset_start'].strip(), 
+                       line_data['offset_end'].strip(),
+                       line_data))
+        return None
+
+    offset_start = int(line_data['offset_start'])
+    offset_end = int(line_data['offset_end'])
+    if (offset_end - offset_start) < 1:
+        logger.warn('dropping empty passage: %r', line_data)
+        return None
+
+    if len(line_data['passage_name'].strip()) < 1:
+        logger.warn('dropping empty passage: %r', line_data)
+        return None
+
+    if len(line_data['passage_name'].decode('utf8')) \
+       != (offset_end - offset_start):
+
+        logger.warn('should we drop this truth record with passage that '
+                    'has a different length compared with offsets: '
+                    'len(line_data["passage_name"].decode("utf8")) '
+                    '= %d != %d = '
+                    '(offset_end - offset_start)',
+                    len(line_data["passage_name"]),
+                    (offset_end - offset_start))
+        logger.warn(line_data['passage_name'])
+        #return None
+
     offset_str = make_offset_string(line_data['offset_start'],
                                     line_data['offset_end'])
 
@@ -71,6 +109,8 @@ def label_from_truth_data_file_line(line_data):
     try:
         rating = int(line_data['grade'])
     except ValueError:
+        logger.warn('replacing bogus grade with zero = %r',
+                    line_data['grade'])
         rating = 0
 
     if rating < 0:
@@ -112,9 +152,10 @@ def parse_truth_data(label_store, truth_data_path):
     for line in csv_reader:
         line_data = parse_line(line)
         label = label_from_truth_data_file_line(line_data)
-        label_store.put(label)
-        num_labels += 1
-        logger.debug('Converted %d labels.' % num_labels)
+        if label is not None:
+            label_store.put(label)
+            num_labels += 1
+            logger.debug('Converted %d labels.' % num_labels)
 
 def main():
     parser = argparse.ArgumentParser('test tool for checking that we can load '

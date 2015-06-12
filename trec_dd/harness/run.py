@@ -80,11 +80,13 @@ class Harness(object):
         def feedback_for_result(result):            
             stream_id, confidence = result
             if len(stream_id.strip()) == 0:
-                sys.exit('Your system submitted a bogus document identifier: %r' % stream_id)
+                sys.exit('Your system submitted a bogus document identifier: %r'
+                         % stream_id)
             try:
                 assert 0 <= float(confidence) <= 1
             except:
-                sys.exit('Your system submitted a bogus confidence value: %r' % confidence)
+                sys.exit('Your system submitted a bogus confidence value: %r'
+                         % confidence)
 
             topic = query_to_topic_id(self.topic_query)
             labels_for_doc = self.label_store.directly_connected(stream_id)
@@ -103,11 +105,7 @@ class Harness(object):
             else:
                 def subtopic_from_label(label):
                     subtopic_id = label.subtopic_for(stream_id)
-                    offset = subtopic_id
-                    if ',' in offset:
-                        offset_begin, offset_end = offset.split(',')
-                    else:
-                        offset_begin, offset_end = '', ''
+                    offset_begin, offset_end = map(int, subtopic_id.split(','))
                     text = label.meta.get('passage_text', '')
                     subtopic = {
                         'subtopic_id': label.subtopic_for(topic),
@@ -159,13 +157,12 @@ class Harness(object):
                     subtopic_tuples.append(subtopic_tuple)
                 subtopic_stanza = '|'.join(subtopic_tuples)
 
-            # <topic> <document-id> <on_topic> <subtopic data>
-            run_file_line = '{}\t{}\t{}\t{}\t{}\n'
-            to_write = run_file_line.format(query_to_topic_id(entry['topic_id']),
-                                            entry['stream_id'],
-                                            entry['confidence'],
-                                            entry['on_topic'],
-                                            subtopic_stanza)
+            # <topic> <document-id> <confidence> <on_topic> <subtopic data>
+            run_file_line = ('%(topic_id)s\t%(stream_id)s\t%(confidence).6f'
+                             '\t%(on_topic)d\t%(subtopic_stanza)s\n')
+            entry['topic_id'] = query_to_topic_id(entry['topic_id'])
+            entry['subtopic_stanza'] = subtopic_stanza
+            to_write = run_file_line % entry
 
             assert len(run_file_line.split()) == 5
 
