@@ -85,9 +85,6 @@ def average_err(run, label_store, mean_type='arithmetic', relevance_metric='grad
         else:
             sys.exit('Error: invalid mean type specified.')
 
-
-
-
     ## macro average over all the topics
     macro_avg = mean(scores_by_topic.values())
 
