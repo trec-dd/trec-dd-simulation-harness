@@ -99,6 +99,7 @@ setup(
         'console_scripts': [
             'trec_dd_harness = trec_dd.harness.run:main',
             'trec_dd_scorer = trec_dd.scorer.run:main',
+            'trec_dd_random_system = trec_dd.system.random_system:main',
         ]
     },
     include_package_data=True,
