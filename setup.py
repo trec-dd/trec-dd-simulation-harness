@@ -95,6 +95,14 @@ setup(
     install_requires=[
         'dossier.label',
     ],
+    install_extras={
+        'postgres': [
+            'psycopg2',
+        ],
+        'mysql': [
+            'kvlayer_mysql',
+        ],
+    },        
     entry_points={
         'console_scripts': [
             'trec_dd_harness = trec_dd.harness.run:main',

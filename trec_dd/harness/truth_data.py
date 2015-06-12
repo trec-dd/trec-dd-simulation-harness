@@ -100,8 +100,8 @@ def label_from_truth_data_file_line(line_data):
                                     line_data['offset_end'])
 
     # annotation data
-    topic = line_data['topic_id']
-    subtopic = line_data['subtopic_id']
+    topic_id = line_data['topic_id']
+    subtopic_id = line_data['subtopic_id']
     annotator = line_data['userid']
 
     # value data
@@ -126,8 +126,8 @@ def label_from_truth_data_file_line(line_data):
             'subtopic_name': line_data['subtopic_name'],
             'passage_text': line_data['passage_name']}
 
-    label = Label(topic, doc_id, annotator, value,
-                  subtopic_id1=subtopic, subtopic_id2=offset_str,
+    label = Label(topic_id, doc_id, annotator, value,
+                  subtopic_id1=subtopic_id, subtopic_id2=offset_str,
                   rating=rating, meta=meta)
     return label
 
@@ -162,15 +162,15 @@ def main():
                                      'the truth data as distributed by NIST for '
                                      'TREC 2015')
     parser.add_argument('truth_data_path', help='path to truth data file')
-    args = parser.parse_args()
+    modules = [yakonfig, kvlayer]
+    args = yakonfig.parse_args(parser, modules)
     logging.basicConfig(level=logging.DEBUG)
-    kvl_config = {'storage_type': 'local',
-                  'namespace': 'test',
-                  'app_name': 'test'}
-    kvl = kvlayer.client(kvl_config)
+    kvl = kvlayer.client()
     label_store = LabelStore(kvl)
     parse_truth_data(label_store, args.truth_data_path)
-    logger.debug('Done!  The data was loaded into memory, and worked, and now we are exiting.')
+    logger.debug('Done!  The truth data was loaded into this kvlayer backend: %r',
+                 json.dumps(yakonfig.get_global_config('kvlayer'), indent=4,
+                            sort_keys=True))
 
 if __name__ == '__main__':
     main()

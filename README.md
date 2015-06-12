@@ -11,7 +11,10 @@ To score a runfile (see "Scoring the System"):
 
 
 This repository also provides a baseline system that randomizes
-subtopic ordering (see "Example TREC DD Systems"):
+subtopic ordering (see "Example TREC DD Systems").  In particular this
+baseline system shows how to hook an a system up to the jig in python.
+Hooking a system up to the jig via the command line is further
+documented below.
 
     trec_dd_random_system truth_data.csv run_file_out.txt &> log.txt &
 
@@ -49,14 +52,24 @@ or on MacOS X
 
 or [on Windows](http://www.tylerbutler.com/2012/05/how-to-install-python-pip-and-virtualenv-on-windows-with-powershell/).
 
+You will also need a database.  We recommend postgres or mysql.  You
+can install this on your system using standard tools.  The connection
+information must be written into the config.yaml file referenced in
+the commands above.  See [config.yaml](examples/config.yaml) for an
+example.
+
 Once you have a virtualenv, the following commands will install the
-trec_dd scorer:
+trec_dd scorer.  You should choose whether you are using mysql or
+postgres and specify that as a pip extras declaration in square
+brackets as follows:
 
     . vpy/bin/activate
-    git clone https://github.com/trec-dd/trec-dd-simulation-harness.git
-    cd trec-dd-simulation-harness
-    pip install dependencies/*tar.gz
-    pip install .
+    pip install trec_dd_simulation_harness[mysql]
+
+or to use postgres:
+
+    . vpy/bin/activate
+    pip install trec_dd_simulation_harness[postgres]
 
 That will create the shell entry points for running the two commands
 illustrated at the top of this file.
@@ -73,11 +86,14 @@ information such as (1) "was the system's response on topic?" (2)
 "how relevant was the system's response?". Please see the
 specification for a "runfile" for more information.
 
-A TREC DD system can interact with the simulation harness in a couple
-of ways. If the system is written in python, it can use the
-HarnessAmbassador interfact found under trec\_dd/system. Otherwise,
-the TREC DD system must invoke harness commands via the command
-line. Please see trec_dd/harness for more information.
+A TREC DD system can interact with the simulation harness in two
+of ways:
+
+ 1. Systems written in python can run the jig in process using
+ [HarnessAmbassador](trec_dd/system/ambassador.py)
+
+ 1. Systems written in other languages invoke harness commands via the
+command line, which is documented 
 
 Once you have a "runfile", you may then score your run. Please
 see the section "Gathering Scores" for more information.

@@ -15,6 +15,7 @@ Harness's python interface for simplicity.
 from __future__ import absolute_import
 import argparse
 from collections import defaultdict
+from itertools import chain
 import logging
 import os
 import random
@@ -23,10 +24,11 @@ import yaml
 
 from dossier.label import LabelStore
 import kvlayer
+import yakonfig
 
 from trec_dd.harness.run import Harness
 from trec_dd.harness.truth_data import parse_truth_data
-from trec_dd.system.ambassador import HarnessAmbassador
+from trec_dd.system.ambassador_cli import HarnessAmbassadorCLI
 
 logger = logging.getLogger(__name__)
 
@@ -37,13 +39,16 @@ class RandomSystem(object):
     def __init__(self, doc_store):
         self.doc_store = doc_store
 
-    def search(self, topic_id):
+    def search(self, query, page_number):
         '''Select 5 random documents.
         '''
-        doc_ids = list(self.doc_store.scan_ids(topic_id))
+        if page_number >= 5: return []
+        doc_ids = list(self.doc_store.scan_ids(query))
         rand_docs = random.sample(doc_ids, min(len(doc_ids), 5))
-        confidences = [random.random() for _ in xrange(5)]
-        return zip(rand_docs, confidences)
+        confidences = [str(int(1000 * random.random())) for _ in xrange(5)]
+        results = list(chain(*zip(rand_docs, confidences)))
+        assert len(results) % 2 == 0, results
+        return results
 
     def process_feedback(self, feedback):
         '''Ignore the feedback from the harness.
@@ -67,6 +72,35 @@ class StubDocumentStore(object):
         for doc_id in self.topic_id_to_doc_ids[topic_id]:
             yield doc_id
 
+def make_doc_store(label_store):
+
+    all_topics = set()
+    for label in label_store.everything():
+        all_topics.add(str(label.meta['topic_id']))
+
+    # build a silly document store. This store will just have
+    # documents corresponding to the topic ids specified within
+    # the topic sequence.
+    topic_id_to_doc_ids = defaultdict(list)
+    for label in label_store.everything():
+        if label.content_id1 in all_topics:
+            doc_id = label.content_id2
+            if not doc_id.strip(): 
+                logger.warn('skipping bogus document identifer: %r' % doc_id)
+                continue
+            topic_id = label.content_id1
+            query = label.meta['topic_name']
+            topic_id_to_doc_ids[query].append(doc_id)
+        elif label.content_id2 in all_topics:
+            doc_id = label.content_id1
+            if not doc_id.strip(): 
+                logger.warn('skipping bogus document identifer: %r' % doc_id)
+                continue
+            topic_id = label.content_id2
+            query = label.meta['topic_name']
+            topic_id_to_doc_ids[query].append(doc_id)
+    doc_store = StubDocumentStore(topic_id_to_doc_ids)
+    return doc_store
 
 def main():
     '''Run the random recommender system on a sequence of topics.
@@ -79,19 +113,19 @@ def main():
                    ' the ordering of passages does not attempt to optimize any'
                    ' particular quality metric.')
     parser = argparse.ArgumentParser(description=description)
-    parser.add_argument('truth_data_path', help='path to truth data.')
-    parser.add_argument('run_file_path', help='path to output a run file.')
-    parser.add_argument('--overwrite', action='store_true', default=False,
-                        help='overwrite any existing run file.')
-    args = parser.parse_args()
+    parser.add_argument('--overwrite', action='store_true')
+    args = yakonfig.parse_args(parser, [yakonfig])
 
     logging.basicConfig(level=logging.DEBUG)
 
-    if os.path.exists(args.run_file_path):
+    config = yakonfig.get_global_config('harness')
+    batch_size = config.get('batch_size', 5)
+    run_file_path = config['run_file_path']
+    if os.path.exists(run_file_path):
         if args.overwrite:
-            os.remove(args.run_file_path)
+            os.remove(run_file_path)
         else:
-            sys.exit('%r already exists' % args.run_file_path)
+            sys.exit('%r already exists' % run_file_path)
 
     kvl_config = {'storage_type': 'local',
                   'namespace': 'test',
@@ -99,49 +133,14 @@ def main():
     kvl = kvlayer.client(kvl_config)
     label_store = LabelStore(kvl)
 
-    parse_truth_data(label_store, args.truth_data_path)
+    parse_truth_data(label_store, config['truth_data_path'])
 
-    all_topics = set()
-    for label in label_store.everything():
-        all_topics.add(label.meta['topic_id'])
-    topic_sequence = dict([(topic, 5) for topic in all_topics])
-
-    # build a silly document store. This store will just have
-    # documents corresponding to the topic ids specified within
-    # the topic sequence.
-    topic_id_to_doc_ids = defaultdict(list)
-    for label in label_store.everything():
-        if label.content_id1 in topic_sequence:
-            doc_id = label.content_id2
-            if not doc_id.strip(): 
-                logger.warn('skipping bogus document identifer: %r' % doc_id)
-                continue
-            topic_id = label.content_id1
-            topic_id_to_doc_ids[topic_id].append(doc_id)
-        elif label.content_id2 in topic_sequence:
-            doc_id = label.content_id1
-            if not doc_id.strip(): 
-                logger.warn('skipping bogus document identifer: %r' % doc_id)
-                continue
-            topic_id = label.content_id2
-            topic_id_to_doc_ids[topic_id].append(doc_id)
-    doc_store = StubDocumentStore(topic_id_to_doc_ids)
-
-    # Set up the system and ambassador.
+    # Set up the system
+    doc_store = make_doc_store(label_store)
     system = RandomSystem(doc_store)
-    ambassador = HarnessAmbassador(system, label_store,
-                                   run_file_path=args.run_file_path)
+    ambassador = HarnessAmbassadorCLI(system, args.config, batch_size)
+    ambassador.run()
 
-    # Run through the topic sequence, controlling the ambassador.
-    for topic, num_iterations in topic_sequence.iteritems():
-        logger.info('Evaluating topic %s' % topic)
-        ambassador.start(topic)
-        for _ in xrange(num_iterations):
-            ambassador.step()
-        logger.info('Stopping topic %s' % topic)
-        ambassador.stop()
-
-    logger.info('Finished. Please find run_file at %s' % args.run_file_path)
 
 if __name__ == '__main__':
     main()
