@@ -17,7 +17,7 @@ from collections import defaultdict
 
 #from numpy import mean
 
-from trec_dd.utils import get_all_subtopics
+from trec_dd.utils import get_all_subtopics, get_best_subtopics
 
 def mean(l):
     s = sum(l)
@@ -97,7 +97,7 @@ def score_topic(topic_id, subtopic_ids, results):
         rel_to_topic = result['on_topic']
 
         gain_i = 0
-        for subtopic, conf in result['subtopics']:
+        for subtopic, conf in get_best_subtopics(result['subtopics']):
             
             ## compute gain
             rel = (2**conf - 1)/2**4 ## magic formula for relevance

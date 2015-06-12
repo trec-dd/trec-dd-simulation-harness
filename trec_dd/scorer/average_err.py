@@ -14,7 +14,7 @@ from collections import defaultdict
 
 #from numpy import mean
 
-from trec_dd.utils import get_all_subtopics
+from trec_dd.utils import get_all_subtopics, get_best_subtopics
 
 def mean(l):
     if len(l) == 0:
@@ -67,7 +67,7 @@ def average_err(run, label_store, mean_type='arithmetic', relevance_metric='grad
         for idx, result in enumerate(results):
             assert idx == result['rank'] - 1
 
-            for subtopic, conf in result['subtopics']:
+            for subtopic, conf in get_best_subtopics(result['subtopics']):
                 rel = relevance_func(conf)
 
                 p_stop_here = p_continue[subtopic]*rel

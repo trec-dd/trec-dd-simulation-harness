@@ -13,7 +13,7 @@ from operator import attrgetter
 
 #from numpy import mean
 
-from trec_dd.utils import get_all_subtopics
+from trec_dd.utils import get_all_subtopics, get_best_subtopics
 
 def mean(l):
     if len(l) == 0:
@@ -29,7 +29,6 @@ def precision_at_recall(run, label_store):
 
     ## score for each topic
     for topic_id, results in run['results'].items():
-        
         ## get all subtopics for the topic
         subtopic_ids = set(get_all_subtopics(label_store, topic_id))
 
@@ -40,7 +39,7 @@ def precision_at_recall(run, label_store):
             assert idx == result['rank'] - 1
 
             result_subtopics = \
-                {subtopic for subtopic, conf in result['subtopics']}
+                {subtopic for subtopic, conf in get_best_subtopics(result['subtopics'])}
 
             if not result_subtopics.issubset(seen_subtopics): 
                 relevant_docs += 1
@@ -48,13 +47,9 @@ def precision_at_recall(run, label_store):
             seen_subtopics.update(result_subtopics)
             if len(seen_subtopics) == len(subtopic_ids):
                 break
-            
         ## precision is number of documents relevant at stopping point
         p = relevant_docs/(idx + 1)
         scores_by_topic[topic_id] = p
-
-
-
 
     ## macro average over all the topics
     macro_avg = mean(scores_by_topic.values())

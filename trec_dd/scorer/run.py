@@ -17,7 +17,6 @@ import os
 import sys
 import yakonfig
 
-from trec_dd.harness.truth_data import parse_truth_data
 from trec_dd.scorer import available_scorers
 
 
@@ -99,7 +98,6 @@ def format_scores(run):
 def main():
     parser = argparse.ArgumentParser(__doc__,
                                      conflict_handler='resolve')
-    parser.add_argument('truth_data_path', help='path to truthdata.')
     parser.add_argument('run_file_path', help='path to run file to score.')
     parser.add_argument('scored_run_file_output_path',
                         help='path to file to create with scores inserted'
@@ -112,7 +110,7 @@ def main():
         dest='scorers', help='names of scorer functions to run;'
                         ' if none are provided, it runs all of them')
 
-    modules = [yakonfig]
+    modules = [yakonfig, kvlayer]
     args = yakonfig.parse_args(parser, modules)
 
     if os.path.exists(args.scored_run_file_output_path):
@@ -127,13 +125,8 @@ def main():
         level = logging.INFO
     logging.basicConfig(level=level)
 
-    config = {'storage_type': 'local',
-              'namespace': 'test',
-              'app_name': 'test'}
-    kvl = kvlayer.client(config)
+    kvl = kvlayer.client()
     label_store = LabelStore(kvl)
-
-    parse_truth_data(label_store, args.truth_data_path)
 
     run = load_run(args.run_file_path)
 
