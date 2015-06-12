@@ -12,16 +12,17 @@ communication between the Harness and the system being
 evaluated. Because our random system is in python, we can use the
 Harness's python interface for simplicity.
 '''
-
 from __future__ import absolute_import
-
 import argparse
 from collections import defaultdict
+import logging
+import os
+import random
+import sys
+import yaml
+
 from dossier.label import LabelStore
 import kvlayer
-import logging
-import random
-import yaml
 
 from trec_dd.harness.run import Harness
 from trec_dd.harness.truth_data import parse_truth_data
@@ -70,13 +71,27 @@ class StubDocumentStore(object):
 def main():
     '''Run the random recommender system on a sequence of topics.
     '''
-    description = 'Run the random recommender system on a sequence of topics.'
+    description = ('A baseline recommender system that uses the truth data to'
+                   ' create output that has perfect recall and would also have'
+                   ' perfect precision if you ignore subtopic diversity/novelty.'
+                   ' This generates output directly from the truth data and'
+                   ' randomly shuffles the truth data per topic, so that'
+                   ' the ordering of passages does not attempt to optimize any'
+                   ' particular quality metric.')
     parser = argparse.ArgumentParser(description=description)
     parser.add_argument('truth_data_path', help='path to truth data.')
     parser.add_argument('run_file_path', help='path to output a run file.')
+    parser.add_argument('--overwrite', action='store_true', default=False,
+                        help='overwrite any existing run file.')
     args = parser.parse_args()
 
     logging.basicConfig(level=logging.DEBUG)
+
+    if os.path.exists(args.run_file_path):
+        if args.overwrite:
+            os.remove(args.run_file_path)
+        else:
+            sys.exit('%r already exists' % args.run_file_path)
 
     kvl_config = {'storage_type': 'local',
                   'namespace': 'test',
