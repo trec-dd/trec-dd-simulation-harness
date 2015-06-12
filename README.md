@@ -5,14 +5,62 @@ TREC DD system during an interactive query session.
 
 # Usage
 
-To evaluate an example "random" system (see "Example TREC DD Systems"):
-
-    python -m trec_dd.system.random_system truth_data.csv run_file_out.csv
-
 To score a runfile (see "Scoring the System"):
 
-    trec_dd_scorer truth_data.csv run_file_in.csv --scorer scorer1 scorer2 ..
-   
+    trec_dd_scorer truth_data.csv run_file_in.txt
+
+
+This repository also provides a baseline system that randomizes
+subtopic ordering (see "Example TREC DD Systems"):
+
+    trec_dd_random_system truth_data.csv run_file_out.txt
+
+The scores for this baseline system using an early version of the TREC
+DD truth data are:
+
+|Score|Metric|
+|-----|------|
+|0.659|average_err_arithmetic|
+|0.302|average_err_harmonic|
+|0.002|cube_test|
+|0.559|modified_precision_at_recall|
+|0.622|precision_at_recall|
+|0.386|reciprocal_rank_at_recall|
+
+
+# Installation
+
+The recommended way to install and use the scorer is with python
+virtualenv, which is a standard tool on all widely used platforms.
+For example on Ubuntu:
+
+    apt-get install python-virtualenv
+    virtualenv vpy
+
+or on CentOS:
+
+    yum install python-virtualenv
+    virtualenv vpy
+
+or on MacOS X
+
+    brew install pyenv-virtualenv
+    pyenv-virtualenv vpy
+
+or [on Windows](http://www.tylerbutler.com/2012/05/how-to-install-python-pip-and-virtualenv-on-windows-with-powershell/).
+
+Once you have a virtualenv, the following commands will install the
+trec_dd scorer:
+
+    . vpy/bin/activate
+    git clone https://github.com/trec-dd/trec-dd-simulation-harness.git
+    cd trec-dd-simulation-harness
+    pip install dependencies/*tar.gz
+    pip install .
+
+That will create the shell entry points for running the two commands
+illustrated at the top of this file.
+
 
 # Simulation Harness
 
@@ -81,12 +129,13 @@ when generating the runfile.
 The top-level scoring script trec\_dd/scorer/run.py is used to generate
 scores. To run it:
 
-    trec_dd_scorer run_file.csv truth_data.csv --scorer scorer1 scorer2 ...
+    trec_dd_scorer truth_data.csv run_file.txt --scorer scorer1 scorer2 ...
 
-This will go through your runfile and use all of the specified scorers to
-evaluate the run of your system. The scorers specified after the --scorer
-option must be the names of scorers known to the system. These are
-exactly the following:
+This will go through your runfile and use all of the specified scorers
+to evaluate the run of your system. By default, the scorer runs all of
+the metrics.  The scorers specified after the --scorer option must be
+the names of scorers known to the system. These are exactly the
+following:
 
  * reciprocal\_rank\_at\_recall
  * precision\_at\_recall
