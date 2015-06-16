@@ -77,7 +77,7 @@ setup(
     name=PROJECT,
     version=VERSION,
     description=DESC,
-    long_description=read_file('README.md'),
+    long_description=read_file('README.rst'),
     author=AUTHOR,
     license='MIT/X11 license http://opensource.org/licenses/MIT',
     author_email=AUTHOR_EMAIL,
