@@ -95,7 +95,7 @@ setup(
     install_requires=[
         'dossier.label',
     ],
-    install_extras={
+    extras_require={
         'postgres': [
             'psycopg2',
         ],

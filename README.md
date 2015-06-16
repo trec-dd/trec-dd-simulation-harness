@@ -120,12 +120,12 @@ postgres and specify that as a pip extras declaration in square
 brackets as follows:
 
     . vpy/bin/activate
-    pip install trec_dd_simulation_harness[mysql]
+    pip install trec_dd[mysql]
 
 or to use postgres:
 
     . vpy/bin/activate
-    pip install trec_dd_simulation_harness[postgres]
+    pip install trec_dd[postgres]
 
 That will create the shell entry points for running the two commands
 illustrated at the top of this file.
