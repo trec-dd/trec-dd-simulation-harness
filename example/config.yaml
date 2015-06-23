@@ -1,5 +1,5 @@
 harness:
-  truth_data_path: trec-dd-early-version-of-truth-2015.csv
+  truth_data_path: /home/collections5/dynamic-domain-2015/dynamic-domain-2015-truth-data-v2.xml
   run_file_path: output.txt
   topic_ids: []
   batch_size: 5
@@ -7,9 +7,4 @@ harness:
 kvlayer:
   namespace: trec
   app_name: dd
-  storage_type: postgrest
-  postgrest:
-    storage_addresses: ['10.0.0.87:5432']
-    username: postgres
-    password: postgres
-    dbname: trec_dd
+  storage_type: 'local'

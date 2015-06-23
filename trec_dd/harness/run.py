@@ -171,12 +171,9 @@ class Harness(object):
             else:
                 def subtopic_from_label(label):
                     subtopic_id = label.subtopic_for(stream_id)
-                    offset_begin, offset_end = map(int, subtopic_id.split(','))
                     subtopic = {
                         'subtopic_id': label.subtopic_for(topic_id),
                         'subtopic_name': label.meta['subtopic_name'],
-                        'offset_begin': offset_begin,
-                        'offset_end': offset_end,
                         'passage_text': label.meta['passage_text'],
                         'rating': label.rating,
                     }

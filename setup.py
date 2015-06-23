@@ -94,6 +94,8 @@ setup(
     ],
     install_requires=[
         'dossier.label',
+        'lxml',
+        'beautifulsoup4',
     ],
     extras_require={
         'postgres': [

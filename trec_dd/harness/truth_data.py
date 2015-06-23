@@ -8,8 +8,8 @@ truth data the harness understands.
 
 from __future__ import absolute_import
 import argparse
-import csv
 import json
+from bs4 import BeautifulSoup
 import logging
 import sys
 
@@ -19,27 +19,27 @@ import yakonfig
 
 logger = logging.getLogger(__name__)
 
-def parse_line(line):
-    '''Given a csv line, return a dict.
+def parse_passage(p):
+    '''Extract a line_data dict from a passage's XML data and context.
     '''
     line_data = {}
-    line_data['domain_id'] = line[0]
-    line_data['domain_name'] = line[1]
-    line_data['userid'] = line[2]
-    line_data['username'] = line[3]
-    line_data['topic_id'] = line[4]
-    line_data['topic_name'] = line[5]
-    line_data['subtopic_id'] = line[6]
-    line_data['subtopic_name'] = line[7]
-    line_data['passage_id'] = line[8]
-    line_data['passage_name'] = line[9]
-    line_data['docno'] = line[10]
-    line_data['offset_start'] = line[11]
-    line_data['offset_end'] = line[12]
-    line_data['grade'] = line[13]
-    line_data['timestamp'] = line[14]
+    domain = p.parent.parent.parent
+    topic = p.parent.parent
+    subtopic = p.parent
+    line_data['domain_id'] = domain['id'].encode('utf-8')
+    line_data['domain_name'] = domain['name'].encode('utf-8')
+    line_data['userid'] = 'dropped'
+    line_data['username'] = 'dropped'
+    line_data['topic_id'] = topic['id'].encode('utf-8')
+    line_data['topic_name'] = topic['name'].encode('utf-8')
+    line_data['subtopic_id'] = subtopic['id'].encode('utf-8')
+    line_data['subtopic_name'] = subtopic['name'].encode('utf-8')
+    line_data['passage_id'] = p['id'].encode('utf-8')
+    line_data['passage_name'] = p.find('text').text.encode('utf-8')
+    line_data['docno'] = p.docno.text.encode('utf-8')
+    line_data['grade'] = p.rating.text.encode('utf-8')
     return line_data
-
+    
 def make_full_doc_id(doc_id, offset_start, offset_end):
     '''A full doc_id is of the form: doc_id#offset_start,offset_end
     '''
@@ -66,44 +66,15 @@ def label_from_truth_data_file_line(line_data):
                     'bad docno: %r: %r'
                     % (doc_id, line_data))
         return None
-    if not (line_data['offset_start'].strip() and
-            line_data['offset_end'].strip()):
-        logger.warn('dropping invalid truth data line: '
-                    'bad offsets %r,%r: %r'
-                    % (line_data['offset_start'].strip(), 
-                       line_data['offset_end'].strip(),
-                       line_data))
-        return None
-
-    offset_start = int(line_data['offset_start'])
-    offset_end = int(line_data['offset_end'])
-    if (offset_end - offset_start) < 1:
-        logger.warn('dropping empty passage: %r', line_data)
-        return None
 
     if len(line_data['passage_name'].strip()) < 1:
         logger.warn('dropping empty passage: %r', line_data)
         return None
 
-    if len(line_data['passage_name'].decode('utf8')) \
-       != (offset_end - offset_start):
-
-        logger.warn('should we drop this truth record with passage that '
-                    'has a different length compared with offsets: '
-                    'len(line_data["passage_name"].decode("utf8")) '
-                    '= %d != %d = '
-                    '(offset_end - offset_start)',
-                    len(line_data["passage_name"]),
-                    (offset_end - offset_start))
-        logger.warn(line_data['passage_name'])
-        #return None
-
-    offset_str = make_offset_string(line_data['offset_start'],
-                                    line_data['offset_end'])
-
     # annotation data
     topic_id = line_data['topic_id']
     subtopic_id = line_data['subtopic_id']
+    passage_id = line_data['passage_id']
     annotator = line_data['userid']
 
     # value data
@@ -129,36 +100,24 @@ def label_from_truth_data_file_line(line_data):
             'passage_text': line_data['passage_name']}
 
     label = Label(topic_id, doc_id, annotator, value,
-                  subtopic_id1=subtopic_id, subtopic_id2=offset_str,
+                  subtopic_id1=subtopic_id, subtopic_id2=passage_id,
                   rating=rating, meta=meta)
     return label
 
-def strip_iter(fh):
-    '''Yields stripped lines from a file.
-    '''
-    for line in fh:
-        stripped = line.strip()
-        stripped = stripped.replace('\r', '')
-        stripped = stripped.replace('\n', '')
-        yield stripped
-
 def parse_truth_data(label_store, truth_data_path, batch_size=10000):
-    data = open(truth_data_path, 'r')
-    # cleanse the nasty Window's characters
-    data = strip_iter(data)
-    csv_reader = csv.reader(data)
-
-    csv_reader.next() # skip first line which is a header.
+    data_file = open(truth_data_path, 'r')
+    data = BeautifulSoup(data_file, 'xml')
 
     labels_to_put = []
     num_labels = 0
-    for line in csv_reader:
-        line_data = parse_line(line)
+    for psg in data.find_all('passage'):
+        line_data = parse_passage(psg)
         label = label_from_truth_data_file_line(line_data)
         if label is not None:
             labels_to_put.append(label)
             num_labels += 1
-            logger.debug('Converted %d labels.' % num_labels)
+            if num_labels % 1000 == 0:
+                logger.debug('Converted %d labels.' % num_labels)
             if len(labels_to_put) >= batch_size:
                 label_store.put(*labels_to_put)
                 labels_to_put = []
