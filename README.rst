@@ -20,8 +20,9 @@ trec\_dd\_scorer
 The harness is run via three commands: start, step, stop. Typically, a
 system will invoke start, then invoke step multiple times, and then
 invoke stop. Every invocation must include the -c argument with a path
-to a valid config.yaml file, as illustrated in example/config.yaml. For
-efficiency, the first time you run with a new configuration, the truth
+to a valid config.yaml file, as illustrated in example/config.yaml.
+
+For efficiency, the first time you run with a new configuration, the truth
 data must be loaded into your database using the ``load`` command.
 
 By default, when you score a system using the harness, all of the topics
@@ -62,11 +63,17 @@ batch\_size results. If you fail to do this, the harness will exit.
 See trec\_dd/system/ambassador\_cli.py for an example of using the
 harness from python.
 
+The harness outputs a runfile, whose path is set in the configuration file.
+
 To score a runfile (see "Scoring the System"):
 
 ::
 
     trec_dd_scorer -c config.yaml run_file_in.txt run_file_scored.json > pretty_table.txt 2> log.txt &
+
+run_file_in.txt is the run file output by the harness.  The scorer
+outputs a scored run file in run_file_scored.json, and scores to
+stdout.
 
 This repository also provides a baseline system that randomizes subtopic
 ordering (see "Example TREC DD Systems"). In particular this baseline
@@ -77,23 +84,20 @@ system up to the jig via the command line is further documented below.
 
     trec_dd_random_system -c config.yaml &> log.txt &
 
-The scores for this baseline system using an early version of the TREC
-DD truth data are:
+The scores for this baseline system using the TREC DD truth data are:
 
 +---------+-----------------------------------+
 | Score   | Metric                            |
 +=========+===================================+
-| 0.659   | average\_err\_arithmetic          |
+| 0.438  | average\_err\_arithmetic          |
 +---------+-----------------------------------+
-| 0.302   | average\_err\_harmonic            |
+| 0.298   | average\_err\_harmonic            |
 +---------+-----------------------------------+
-| 0.002   | cube\_test                        |
+| 0.125   | modified\_precision\_at\_recall   |
 +---------+-----------------------------------+
-| 0.559   | modified\_precision\_at\_recall   |
+| 0.981   | precision\_at\_recall             |
 +---------+-----------------------------------+
-| 0.996   | precision\_at\_recall             |
-+---------+-----------------------------------+
-| 0.386   | reciprocal\_rank\_at\_recall      |
+| 0.075   | reciprocal\_rank\_at\_recall      |
 +---------+-----------------------------------+
 
 Installation
@@ -186,7 +190,13 @@ Executing the Random System
 Requirements
 ------------
 
-To run the example systems, you must have a truth data csv file.
+To run the example systems, you must have a truth data XML file.  Make
+sure your database is set up as per your config.yaml, and load the
+truth data into the database:
+
+::
+
+   trec_dd_harness -c config.yaml load 
 
 Running the System
 ------------------
@@ -195,10 +205,10 @@ You can run the random system in the simulation harness by calling
 
 ::
 
-    trec_dd_random_system -c config.yaml &> log.txt &
+    trec_dd_random_system -c config.yaml >log.txt 2>&1
 
 After this command executes, you should find the resulting system
-runfile at the path you specified in the command. The runfile summarizes
+runfile at the path you specified in the configuration. The runfile summarizes
 the responses the random system gave to the harness, as well as the
 harness's thoughts on those responses. This runfile captures everything
 one needs to know in order to give a system a score.
@@ -235,8 +245,12 @@ scores. To run it:
 
     trec_dd_scorer -c config.yaml run_file_in.txt run_file_scored.json > pretty_table.txt 2> log.txt &
 
-This will go through your runfile and run each TREC DD scorer. If you
-wish to run specific scorers, rather than all of them, please see the
+This will go through your runfile and run each TREC DD
+scorer. run_file_in.txt is the runfile produced as output by the
+harness.  The scorer outputs an annotated version of your run in
+run_file_scored.json, and the scores to stdout.
+
+If you wish to run specific scorers, rather than all of them, please see the
 '--scorer' option on the trec\_dd\_scorer command. The scorers specified
 after the --scorer option must be the names of scorers known to the
 system. These are exactly the following:
@@ -246,8 +260,6 @@ system. These are exactly the following:
 -  modified\_precision\_at\_recall
 -  average\_err\_arithmetic
 -  average\_err\_harmonic
--  average\_err\_arithmetic\_binary
--  average\_err\_harmonic\_binary
 
 Description of Scorers
 ======================
@@ -263,21 +275,7 @@ Description of Scorers
    arithmetic average. It uses a graded relevance for computing stopping
    probabilities.
 
--  average\_err\_arithmetic\_binary calculates the expected reciprocal
-   rank for each subtopic, and then averages the scores accross
-   subtopics using an arithmetic average. It uses binary relevance for
-   computing stopping probabilities. Hence, this scorer ignores the
-   'rating' field in the runfile.
-
 -  average\_err\_harmonic calculates the expected reciprocal rank for
    each subtopic, and then averages the scores accross subtopics using
    an arithmetic average. It uses graded relevance for computing
    stopping probabilities.
-
--  average\_err\_harmonic\_binary average\_err\_harmonic calculates the
-   expected reciprocal rank for each subtopic, and then averages the
-   scores accross subtopics using an arithmetic average. It uses binary
-   relevance for computing stopping probabilities. Hence, this scorer
-   ignores the 'rating' field in the runfile.
-
-
