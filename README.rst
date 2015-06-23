@@ -25,6 +25,16 @@ to a valid config.yaml file, as illustrated in example/config.yaml.
 For efficiency, the first time you run with a new configuration, the truth
 data must be loaded into your database using the ``load`` command.
 
+::
+
+   (Postgres example, using psql)
+   CREATE USER trec_dd_user PASSWORD 'some_password';
+   CREATE DATABASE trec_dd OWNER trec_dd_user
+
+   (back at the Unix shell)
+   (set up config.yaml to point to the database and the truth data file)
+   trec_dd_harness -c config.yaml load
+
 By default, when you score a system using the harness, all of the topics
 are applied to the system in an order selected by the harness. You can
 limit the topic\_ids that are used by specifying the topic\_ids property
