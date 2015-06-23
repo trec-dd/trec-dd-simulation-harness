@@ -9,11 +9,13 @@ truth data the harness understands.
 from __future__ import absolute_import
 import argparse
 import csv
+import json
 import logging
 import sys
 
 from dossier.label import Label, LabelStore, CorefValue
 import kvlayer
+import yakonfig
 
 logger = logging.getLogger(__name__)
 
@@ -140,7 +142,7 @@ def strip_iter(fh):
         stripped = stripped.replace('\n', '')
         yield stripped
 
-def parse_truth_data(label_store, truth_data_path):
+def parse_truth_data(label_store, truth_data_path, batch_size=10000):
     data = open(truth_data_path, 'r')
     # cleanse the nasty Window's characters
     data = strip_iter(data)
@@ -148,14 +150,20 @@ def parse_truth_data(label_store, truth_data_path):
 
     csv_reader.next() # skip first line which is a header.
 
+    labels_to_put = []
     num_labels = 0
     for line in csv_reader:
         line_data = parse_line(line)
         label = label_from_truth_data_file_line(line_data)
         if label is not None:
-            label_store.put(label)
+            labels_to_put.append(label)
             num_labels += 1
             logger.debug('Converted %d labels.' % num_labels)
+            if len(labels_to_put) >= batch_size:
+                label_store.put(*labels_to_put)
+                labels_to_put = []
+    if len(labels_to_put) > 0:
+        label_store.put(*labels_to_put)
 
 def main():
     parser = argparse.ArgumentParser('test tool for checking that we can load '

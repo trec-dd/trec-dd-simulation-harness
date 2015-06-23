@@ -181,7 +181,7 @@ class Harness(object):
                         'rating': label.rating,
                     }
                     return subtopic
-                
+
                 subtopic_feedback = [subtopic_from_label(label)
                                      for label in labels_for_doc]
 
@@ -322,8 +322,8 @@ def main():
         parse_truth_data(label_store, config['truth_data_path'])
         logger.info('Done!  The truth data was loaded into this '
                      'kvlayer backend:\n%s',
-                     json.dumps(yakonfig.get_global_config('kvlayer'), 
-                                indent=4, sort_keys=True))
+                    json.dumps(yakonfig.get_global_config('kvlayer'),
+                               indent=4, sort_keys=True))
 
     elif args.command == 'init':
         response = harness.init()
@@ -342,7 +342,6 @@ def main():
         topic_id = parts.pop(0)
         feedback = harness.step(topic_id, parts)
         print(json.dumps(feedback))
-            
 
 if __name__ == '__main__':
     main()
