@@ -112,5 +112,6 @@ setup(
             'trec_dd_random_system = trec_dd.system.random_system:main',
         ]
     },
+    scripts=['bin/cubeTest.pl'],
     include_package_data=True,
 )
