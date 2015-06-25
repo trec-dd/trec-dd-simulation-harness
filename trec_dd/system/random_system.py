@@ -38,17 +38,32 @@ class RandomSystem(object):
 
     def __init__(self, doc_store):
         self.doc_store = doc_store
+        self.submitted_docs = set()
+
+    def doc_ids_to_results(self, doc_ids):
+        num_docs = len(doc_ids)
+        confidences = [str(int(1000 * random.random()))
+                       for _ in xrange(num_docs)]
+        results = list(chain(*zip(doc_ids, confidences)))
+        return results
 
     def search(self, query, page_number):
         '''Select 5 random documents.
         '''
         if page_number >= 5: return []
-        doc_ids = list(self.doc_store.scan_ids(query))
-        rand_docs = random.sample(doc_ids, min(len(doc_ids), 5))
-        confidences = [str(int(1000 * random.random())) for _ in xrange(5)]
-        results = list(chain(*zip(rand_docs, confidences)))
-        assert len(results) % 2 == 0, results
-        return results
+        doc_ids = list(self.doc_store.scan_ids(
+            query, ignore=self.submitted_docs))
+
+        # if less than 5, return now. Otherwise
+        # random.sample will complain about size
+        # of input.
+        if len(doc_ids) < 5:
+            self.submitted_docs.update(doc_ids)
+            return self.doc_ids_to_results(doc_ids)
+        else:
+            rand_docs = random.sample(doc_ids, min(len(doc_ids), 5))
+            self.submitted_docs.update(doc_ids)
+            return self.doc_ids_to_results(rand_docs)
 
     def process_feedback(self, feedback):
         '''Ignore the feedback from the harness.
@@ -66,11 +81,12 @@ class StubDocumentStore(object):
     def __init__(self, topic_id_to_doc_ids):
         self.topic_id_to_doc_ids = topic_id_to_doc_ids
 
-    def scan_ids(self, topic_id):
+    def scan_ids(self, topic_id, ignore=None):
         '''Just iterate over doc ids in memory.
         '''
         for doc_id in self.topic_id_to_doc_ids[topic_id]:
-            yield doc_id
+            if ignore is None or doc_id not in ignore:
+                yield doc_id
 
 def make_doc_store(label_store):
 
@@ -81,7 +97,7 @@ def make_doc_store(label_store):
     # build a silly document store. This store will just have
     # documents corresponding to the topic ids specified within
     # the topic sequence.
-    topic_id_to_doc_ids = defaultdict(list)
+    topic_id_to_doc_ids = defaultdict(set)
     for label in label_store.everything():
         if label.content_id1 in all_topics:
             doc_id = label.content_id2
@@ -90,7 +106,7 @@ def make_doc_store(label_store):
                 continue
             topic_id = label.content_id1
             query = label.meta['topic_name']
-            topic_id_to_doc_ids[query].append(doc_id)
+            topic_id_to_doc_ids[query].add(doc_id)
         elif label.content_id2 in all_topics:
             doc_id = label.content_id1
             if not doc_id.strip(): 
@@ -98,7 +114,7 @@ def make_doc_store(label_store):
                 continue
             topic_id = label.content_id2
             query = label.meta['topic_name']
-            topic_id_to_doc_ids[query].append(doc_id)
+            topic_id_to_doc_ids[query].add(doc_id)
     doc_store = StubDocumentStore(topic_id_to_doc_ids)
     return doc_store
 
@@ -127,10 +143,7 @@ def main():
         else:
             sys.exit('%r already exists' % run_file_path)
 
-    kvl_config = {'storage_type': 'local',
-                  'namespace': 'test',
-                  'app_name': 'test'}
-    kvl = kvlayer.client(kvl_config)
+    kvl = kvlayer.client()
     label_store = LabelStore(kvl)
 
     parse_truth_data(label_store, config['truth_data_path'])

@@ -33,12 +33,14 @@ def topic_id_to_query(topic_id):
 
 TOPIC_IDS = 'trec_dd_harness_topic_ids'
 EXPECTING_STOP = 'trec_dd_harness_expecting_stop'
+SEEN_DOCS = 'trec_dd_harness_seen_docs'
 
 class Harness(object):
 
     tables = {
         TOPIC_IDS: (str,),
         EXPECTING_STOP: (str,),
+        SEEN_DOCS: (str, str,),
     }
 
     def __init__(self, config, kvl, label_store):
@@ -62,8 +64,13 @@ class Harness(object):
             return True
 
     def init(self, topic_ids=None):
-        '''Initialize the DB table of topics to apply to the engine under test.
+        '''Initialize the DB.
+
+        This pushes the list of topics to test on the system into the
+        database. It also clears out the state of the previous run
+        from the system.
         '''
+        self.kvl.clear_table(SEEN_DOCS)
         self.kvl.clear_table(TOPIC_IDS)
         all_topics = dict()
         for label in self.label_store.everything():
@@ -138,13 +145,25 @@ class Harness(object):
             logger.warn('fewer than the batch size, so automatically calling `stop` '
                         'this query; you must call `start` to move on to the next query.')
             self.set_expecting_stop(topic_id)
-    
+
         pairs = [iter(results)] * 2
         results = [(stream_id, int(conf))
                    for stream_id, conf in itertools.izip_longest(*pairs)]
 
+        # verify that the system hasn't repeated any stream items.
+        for stream_id, _ in results:
+            key_range = ((topic_id, stream_id), (topic_id, stream_id))
+            for (topic_id, doc_id), _ in self.kvl.scan(SEEN_DOCS, key_range):
+                msg = 'Your system submitted document {} twice as a result.'
+                msg = msg.format(doc_id)
+                sys.exit(msg)
+
+            key = (topic_id, stream_id)
+            val = ''
+            self.kvl.put(SEEN_DOCS, (key, val))
+
         # private function for constructing feedback, used in `map` below
-        def feedback_for_result(result):            
+        def feedback_for_result(result):
             stream_id, confidence = result
             if len(stream_id.strip()) == 0:
                 sys.exit('Your system submitted a bogus document identifier: %r'
