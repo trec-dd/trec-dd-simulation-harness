@@ -143,7 +143,10 @@ def main():
         else:
             sys.exit('%r already exists' % run_file_path)
 
-    kvl = kvlayer.client()
+    kvl_config = {'storage_type': 'local',
+                  'namespace': 'test',
+                  'app_name': 'test'}
+    kvl = kvlayer.client(kvl_config)
     label_store = LabelStore(kvl)
 
     parse_truth_data(label_store, config['truth_data_path'])
