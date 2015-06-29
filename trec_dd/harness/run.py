@@ -34,6 +34,7 @@ def topic_id_to_query(topic_id):
 TOPIC_IDS = 'trec_dd_harness_topic_ids'
 EXPECTING_STOP = 'trec_dd_harness_expecting_stop'
 SEEN_DOCS = 'trec_dd_harness_seen_docs'
+INTERACTION_SEQ = 'trec_dd_harness_interaction_seq'
 
 class Harness(object):
 
@@ -41,6 +42,7 @@ class Harness(object):
         TOPIC_IDS: (str,),
         EXPECTING_STOP: (str,),
         SEEN_DOCS: (str, str,),
+        INTERACTION_SEQ: (str,),
     }
 
     def __init__(self, config, kvl, label_store):
@@ -72,6 +74,7 @@ class Harness(object):
         '''
         self.kvl.clear_table(SEEN_DOCS)
         self.kvl.clear_table(TOPIC_IDS)
+        self.kvl.clear_table(INTERACTION_SEQ)
         all_topics = dict()
         for label in self.label_store.everything():
             all_topics[(label.meta['topic_id'],)] = label.meta['topic_name']
@@ -97,12 +100,27 @@ class Harness(object):
     def set_expecting_stop(self, topic_id):
         self.kvl.put(EXPECTING_STOP, ((topic_id,), 'YES'))
 
+    def start_interaction_seq(self, topic_id):
+        self.kvl.put(INTERACTION_SEQ, ((topic_id,), '0'))
+
+    def incr_interaction_seq(self, topic_id):
+        last_iter_q = list(self.kvl.get(INTERACTION_SEQ, (topic_id,)))
+        if len(last_iter_q) == 0:
+            sys.exit('Harness did not find an iteration sequence number '
+                     'for topic_id %s. Did you call '
+                     '`trec_dd_harness start`?' % topic_id)
+        _topic_id, last_iter = last_iter_q[0]
+        next_iter = str(int(last_iter) + 1)
+        self.kvl.put(INTERACTION_SEQ, ((topic_id,), next_iter))
+        return int(last_iter)
+                        
     def start(self):
         '''initiates a round of feedback to recommender under evaluation.
         '''
         self.check_expecting_stop()
         self.verify_label_store()
         for (topic_id,), query_string in self.kvl.scan(TOPIC_IDS):
+            self.start_interaction_seq(topic_id)
             return {'topic_id': topic_id, 'query': query_string}
 
         # finished all the topics, so end.
@@ -135,6 +153,8 @@ class Harness(object):
             sys.exit('%d != %d, which is where the database says we are'
                      % (topic_id, _topic_id))
 
+        iteration = self.incr_interaction_seq(topic_id)
+            
         if len(results) > 2 * self.batch_size:
             logger.warn('command="step" allows up to twice batch_size (2 x %d = %d) '
                         'input args: stream_id conf stream_id conf ..., not %d = len(%r)',
@@ -217,11 +237,11 @@ class Harness(object):
             return feedback
 
         all_feedback = map(feedback_for_result, results)
-        self.write_feedback_to_run_file(all_feedback)
+        self.write_feedback_to_run_file(iteration, all_feedback)
         return all_feedback
 
 
-    def write_feedback_to_run_file(self, feedback):
+    def write_feedback_to_run_file(self, iteration, feedback):
         if self.run_file_path is None:
             return
 
@@ -238,18 +258,19 @@ class Harness(object):
                     subtopic_tuples.append(subtopic_tuple)
                 subtopic_stanza = '|'.join(subtopic_tuples)
 
-            # <topic> <document-id> <confidence> <on_topic> <subtopic data>
-            run_file_line = ('%(topic_id)s\t%(stream_id)s\t%(confidence).6f'
+            # <topic> <iteration> <document-id> <confidence> <on_topic> <subtopic data>
+            run_file_line = ('%(topic_id)s\t%(iteration)s\t%(stream_id)s\t%(confidence).6f'
                              '\t%(on_topic)d\t%(subtopic_stanza)s\n')
             output_dict = {'subtopic_stanza': subtopic_stanza,
                            'topic_id': entry['topic_id'],
+                           'iteration': iteration,
                            'stream_id': entry['stream_id'],
                            'confidence': entry['confidence'],
                            'on_topic': entry['on_topic'],
                            }
             to_write = run_file_line % output_dict
 
-            assert len(run_file_line.split()) == 5
+            assert len(run_file_line.split()) == 6
 
             run_file.write(to_write)
 
