@@ -62,7 +62,7 @@ class RandomSystem(object):
             return self.doc_ids_to_results(doc_ids)
         else:
             rand_docs = random.sample(doc_ids, min(len(doc_ids), 5))
-            self.submitted_docs.update(doc_ids)
+            self.submitted_docs.update(rand_docs)
             return self.doc_ids_to_results(rand_docs)
 
     def process_feedback(self, feedback):
