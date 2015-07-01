@@ -110,7 +110,8 @@ open (RUN, $RUN) || die "$0: cannot open \"$RUN\": !$\n";
 my $rank = "";
 while (<RUN>) {
   s/[\r\n]//g;
-  ($topic, $q0, $docno, $rank, $score, $runid, $iteration) = split ('\s+');
+  # ($topic, $q0, $docno, $rank, $score, $runid, $iteration) = split ('\s+');
+  ($topic, $iteration, $docno, $score, $rel, $subtopics) = split ('\s+');
   if($maxIteration < $iteration){
 	$maxIteration = $iteration;
   }
@@ -119,7 +120,7 @@ while (<RUN>) {
   $topic =~ s/^.*\-//;
   die "$0: format error on line $. of \"$RUN\"\n"
     unless
-      $topic =~ /^[0-9]+$/ && $q0 eq "Q0" && $docno;
+      $topic =~ /^DD15-[0-9]+$/ && $docno;
   $run[$#run + 1] = "$topic $docno $score $iteration";
 
   if(defined $doclength && length $doclength > 0){

@@ -28,7 +28,7 @@ def load_run(run_file_path):
 validity, and returning a dictionary keyed on topic_id with values
 that are dictionaries of
 
-    topic_id, stream_id, confidence, on_topic, subtopics
+    topic_id, iteration, stream_id, confidence, on_topic, subtopics
 
 where subtopics is a pipe-delimited list of colon-delimited two-tuples
 of (subtopic_id, rating)
@@ -45,12 +45,12 @@ of (subtopic_id, rating)
     for line in fh:
         if line.startswith('#'): continue
         parts = line.split()
-        if len(parts) != 5:
+        if len(parts) != 6:
             sys.exit('Your run file is invalid, because line '
                      '%d has %d parts instead of 5' 
                      % (line_idx, len(parts)))
 
-        topic_id, stream_id, confidence, on_topic, subtopics_and_ratings = parts
+        topic_id, iteration, stream_id, confidence, on_topic, subtopics_and_ratings = parts
         on_topic = bool(int(on_topic))
         confidence = float(confidence)
 
