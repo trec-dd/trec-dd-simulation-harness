@@ -1,3 +1,7 @@
+#!/usr/bin/perl
+
+#########################################
+
 ## CubeTest Implementation For TREC Dynamic Domain Track Evaluation
 
 ## For Linux Unix Platform
@@ -7,10 +11,6 @@
 ## Version: lgc
 
 ## Date: 12/03/2014
-
-#########################################
-
-#!/usr/bin/perl -w
 
 #########################################
 
