@@ -86,7 +86,7 @@ def test_step(local_kvl, tmpdir):
     # Check write file
     run_file = open(run_file_path, 'r')
     for idx, line in enumerate(csv.reader(run_file, delimiter='\t')):
-        topic, doc_id, confidence, on_topic, subtopic_data = line
+        topic, iteration, doc_id, confidence, on_topic, subtopic_data = line
         assert topic == feedback[idx]['topic_id']
         assert doc_id == feedback[idx]['stream_id']
         assert on_topic == str(feedback[idx]['on_topic'])
