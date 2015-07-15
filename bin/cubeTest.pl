@@ -1,7 +1,5 @@
 #!/usr/bin/perl
 
-#########################################
-
 ## CubeTest Implementation For TREC Dynamic Domain Track Evaluation
 
 ## For Linux Unix Platform
@@ -13,6 +11,7 @@
 ## Date: 12/03/2014
 
 #########################################
+
 
 #### Parameter setup and initialization
 $usage = "Usage: perl score/cubeTest.pl qrel run_file cutoff\n
@@ -51,31 +50,80 @@ $K = $ARGV[$arg++] or die $usage;
 #########################################
 
 #### Read qrels file(groundtruth), check format, and sort
-
 open (QRELS, $QRELS) || die "$0: cannot open \"$QRELS\": !$\n";
+my %tmpQrel = ();
 while (<QRELS>) {
   s/[\r\n]//g;
-  ($topic, $subtopic, $docno, $judgment) = split ('\s+');
-  $subTWeigt = 1;
-  $topic =~ s/^.*\-//;
+  ($topic, $subtopic,$passage, $docno, $judgment) = split ('\s+');
+
+  $topic =~ s/[\r\n]//;
   die "$0: format error on line $. of \"$QRELS\"\n"
     unless
-      $topic =~ /^[0-9]+$/ 
-      && $judgment =~ /^-?[0-9.]+$/; #&& $judgment <= $MAX_JUDGMENT
+      $judgment =~ /^-?[0-9.]+$/; #&& $judgment <= $MAX_JUDGMENT
   if ($judgment > 0) {
-    $qrels{$topic}{$docno}{$subtopic}=$judgment/$MAX_JUDGMENT;
-    if(!exists $subtopicWeight{$topic}{$subtopic}){
-      if(defined $subTWeigt && length $subTWeigt> 0){
-         $subtopicWeight{$topic}{$subtopic} = $subTWeigt;
-      }      
-      $currentGainHeight{$topic}{$subtopic} = 0;
-      $subtopicCover{$topic}{$subtopic} = 0;
-    }
-
-    $seen{$topic}++;
+      $tmpQrel{$topic}{$docno}{$subtopic}{$passage}=$judgment;
   }
 }
 close (QRELS);
+
+foreach my $tmpTopicKey (keys %tmpQrel){
+  my %documents = %{$tmpQrel{$tmpTopicKey}};
+  foreach my $tmpDoc (keys %documents){
+     my %subtopics = %{$documents{$tmpDoc}};
+     foreach my $tmpSubtopic (keys %subtopics){
+        my %passages = %{$subtopics{$tmpSubtopic}};
+        my @rels = ();
+        foreach my $tmpPassage (keys %passages){
+	  push(@rels, $passages{$tmpPassage});
+        } 
+        my @tmpRel = sort {$b <=> $a} @rels;
+	my $final_qrel = 0;
+        my $rank = 0;
+        foreach my $element(@tmpRel){
+           $rank++;
+           my $discount = log($rank+1)/log(2);
+           $final_qrel += $element / $discount;
+        }
+		
+        $subTWeigt = 1;
+        $qrels{$tmpTopicKey}{$tmpDoc}{$tmpSubtopic}=$final_qrel;
+
+	if(!exists $subtopicWeight{$tmpTopicKey}{$tmpSubtopic}){
+           if(defined $subTWeigt && length $subTWeigt> 0){
+              $subtopicWeight{$tmpTopicKey}{$tmpSubtopic} = $subTWeigt;
+           }
+           $currentGainHeight{$tmpTopicKey}{$tmpSubtopic} = 0;
+           $subtopicCover{$tmpTopicKey}{$tmpSubtopic} = 0;
+        }
+
+        $seen{$tmpTopicKey}++;
+     }
+  }
+}
+
+##### Normalize relevance rating
+=cut
+foreach my $tmpTopicKey (keys %qrels){
+  my %documents = %{$qrels{$tmpTopicKey}};
+  my $maxRel = 0;
+  foreach my $tmpDoc (keys %documents){
+     my %subtopics = %{$documents{$tmpDoc}};
+     foreach my $tmpSubtopic (keys %subtopics){
+        if($qrels{$tmpTopicKey}{$tmpDoc}{$tmpSubtopic} > $maxRel){
+	   $maxRel = $qrels{$tmpTopicKey}{$tmpDoc}{$tmpSubtopic};
+        }
+     }
+  }
+
+  foreach my $tmpDoc (keys %documents){
+     my %subtopics = %{$documents{$tmpDoc}};
+     foreach my $tmpSubtopic (keys %subtopics){
+        $qrels{$tmpTopicKey}{$tmpDoc}{$tmpSubtopic} = $qrels{$tmpTopicKey}{$tmpDoc}{$tmpSubtopic}/$maxRel;
+        #print "$tmpTopicKey $tmpDoc $tmpSubtopic ", $qrels{$tmpTopicKey}{$tmpDoc}{$tmpSubtopic} , "\n";
+     }
+  }
+}
+=cut
 
 #########################################
 
@@ -110,17 +158,16 @@ open (RUN, $RUN) || die "$0: cannot open \"$RUN\": !$\n";
 my $rank = "";
 while (<RUN>) {
   s/[\r\n]//g;
-  # ($topic, $q0, $docno, $rank, $score, $runid, $iteration) = split ('\s+');
-  ($topic, $iteration, $docno, $score, $rel, $subtopics) = split ('\s+');
+  ($topic, $q0, $docno, $rank, $score, $runid, $iteration) = split ('\s+');
   if($maxIteration < $iteration){
 	$maxIteration = $iteration;
   }
   $doclength = 1; #`./bin/getDocLength $docno $index`;
   #$doclength =~ s/[\r\n]//g;
-  $topic =~ s/^.*\-//;
+  $topic =~ s/[\r\n]//;
   die "$0: format error on line $. of \"$RUN\"\n"
     unless
-      $topic =~ /^DD15-[0-9]+$/ && $docno;
+      $q0 eq "Q0" && $docno;
   $run[$#run + 1] = "$topic $docno $score $iteration";
 
   if(defined $doclength && length $doclength > 0){
@@ -133,12 +180,12 @@ while (<RUN>) {
 
 #### Process runs: compute measures for each topic and average
 
-print "runid,topic,ct_speed\@$K,ct_accel\@$K\n";
-$topicCurrent = -1;
+print "runid,topic,ct\@$K,ct_accel\@$K\n";
+$topicCurrent = "-1";
 for ($i = 0; $i <= $#run; $i++) {
   ($topic, $docno, $score, $iteration) = split (' ', $run[$i]);
-  if ($topic != $topicCurrent) {
-    if ($topicCurrent >= 0) {
+  if ($topic ne $topicCurrent) {
+    if ($topicCurrent ne "-1") {
       &topicDone ($RUN, $topicCurrent, \@docls, \@iterations );
       $#docls = -1;
       $#iterations = -1;
@@ -148,7 +195,7 @@ for ($i = 0; $i <= $#run; $i++) {
   $docls[$#docls + 1] = $docno;
   $iterations[$#iterations + 1] = $iteration;
 }
-if ($topicCurrent >= 0) {  
+if ($topicCurrent ne "-1") {  
   &topicDone ($RUN, $topicCurrent, \@docls, \@iterations);
   $#docls = -1;
   $#iterations = -1;
@@ -157,9 +204,9 @@ if ($topics > 0) {
   $ctAvg = $ctTotal/$topics;
   $accelAvg = $ct_accuTotal/$topics;
 
-  printf "$RUN,amean,%.10f,%.10f\n",$ctAvg,$accelAvg;
+  printf "$RUN,all,%.10f,%.10f\n",$ctAvg,$accelAvg;
 } else {
-  print "$RUN,amean,0.00000,0.00000\n";
+  print "$RUN,all,0.00000,0.00000\n";
 }
 
 exit 0;
@@ -190,6 +237,7 @@ sub topicDone {
     $ctTotal += $ct_speed;
     $topics++;
     printf  "$runid,$topicCurrent,%.10f,%.10f\n",$ct_speed,$ct_accu;
+    &clearEnv;
   }
 }
 
@@ -224,6 +272,7 @@ sub ct {
    my $docGain = &getDocGain($topic, $local_docls[$i], $i + 1);
    $score += $docGain;
  }
+
  return $score;
 }
 
@@ -238,7 +287,7 @@ sub getDocGain{
         if(&isStop($topic, $subKey) < 0 ){
            my $boost = 1;
            for my $subKey1(keys %subtopics){
-               if(exists $currentGainHeight{$topic}{$subKey1} && $subKey != $subKey1){
+               if(exists $currentGainHeight{$topic}{$subKey1} && $subKey ne $subKey1){
                   my $areaW = &getArea($topic, $subKey1);
                   my $heightW =  $currentGainHeight{$topic}{$subKey1};
                   $boost += $beta * $areaW * $heightW;
@@ -254,7 +303,7 @@ sub getDocGain{
 
            my $area = &getArea($topic, $subKey);
 
-           $rel = $beta * $area * $height;
+           $rel += $beta * $area * $height;
         }
     }
 
@@ -263,7 +312,7 @@ sub getDocGain{
     }
     
   }
-
+  
   return $rel;   
 }
 
