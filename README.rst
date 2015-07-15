@@ -64,11 +64,34 @@ trec\_dd/system/ambassador\_cli.py example:
             `stop`
 
 Each of the five commands returns a JSON dictionary which your system
-can read using a JSON library. The harness always provides feedback for
-every result, even if the feedback is that the system has no truth data
-for that result. Note that your use of the harness *must* call ``stop``
-in the next iteration after any step in which you submit fewer than
-batch\_size results. If you fail to do this, the harness will exit.
+can read using a JSON library. After a ``step`` command, the response
+looks like:
+
+::
+
+   [
+    {
+        "topic_id": "DD15-1"
+        "confidence": 0.987, 
+        "on_topic": 1, 
+        "stream_id": "1335424206-b5476b1b8bf25b179bcf92cfda23d975", 
+        "subtopics": [
+            {
+                "passage_text": "this is a passage of relevant text from the document 'stream_id', relevant to the 'subtopic_id' below with the 'rating' below", 
+                "rating": 3, 
+                "subtopic_id": "DD15-1.4", 
+                "subtopic_name": "a label for this subtopic"
+            }
+        ], 
+    }, 
+    { ... }
+   ]
+
+The harness always provides feedback for every result, even if the
+feedback is that the system has no truth data for that result. Note
+that your use of the harness *must* call ``stop`` in the next
+iteration after any step in which you submit fewer than batch\_size
+results. If you fail to do this, the harness will exit.
 
 See trec\_dd/system/ambassador\_cli.py for an example of using the
 harness from python.
@@ -99,7 +122,7 @@ The scores for this baseline system using the TREC DD truth data are:
 +---------+-----------------------------------+
 | Score   | Metric                            |
 +=========+===================================+
-| 0.438  | average\_err\_arithmetic          |
+| 0.438   | average\_err\_arithmetic          |
 +---------+-----------------------------------+
 | 0.298   | average\_err\_harmonic            |
 +---------+-----------------------------------+
@@ -248,17 +271,23 @@ generating the runfile.
 Running the Scorer
 ------------------
 
-The top-level scoring script trec\_dd/scorer/run.py is used to generate
-scores. To run it:
+There are two scoring scripts used to compute evaluation scores. bin/cubeTest.pl is used to compute Cube Test results.  To run it:
+
+::
+    bin/cubeTest.pl cubetest-qrels runfile cutoff
+
+where ``runfile`` is the output runfile from the jig, ``cubetest-qrels`` is a specially-formatted version of the truth data (and available from the same place), and ``cutoff`` is the number of iterations for running the Cube Test.
+
+trec\_dd/scorer/run.py is used to generate other evaluation scores including u-ERR. To run it:
 
 ::
 
     trec_dd_scorer -c config.yaml run_file_in.txt run_file_scored.json > pretty_table.txt 2> log.txt &
 
-This will go through your runfile and run each TREC DD
-scorer. run_file_in.txt is the runfile produced as output by the
+This will go through your runfile and run each configured TREC DD
+scorer. ``run_file_in.txt`` is the runfile produced as output by the
 harness.  The scorer outputs an annotated version of your run in
-run_file_scored.json, and the scores to stdout.
+``run_file_scored.json``, and the scores to stdout.
 
 If you wish to run specific scorers, rather than all of them, please see the
 '--scorer' option on the trec\_dd\_scorer command. The scorers specified
@@ -273,6 +302,8 @@ system. These are exactly the following:
 
 Description of Scorers
 ======================
+
+-  The Cube Test is a search effectiveness measurement that measures the speed of gaining relevant information (could be documents or passages) in a dynamic search process. It measures the amount of relevant information a search system could gather for the entire search process with multiple runs of retrieval. A higher Cube Test score means a better DD system, which ranks relevant information (documents and/or passages) for a complex search topic as much as possible and as early as possible.
 
 -  reciprocal\_rank\_at\_recall calculates the reciprocal of the rank by
    which every subtopic for a topic is accounted for.
