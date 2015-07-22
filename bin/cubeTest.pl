@@ -54,14 +54,14 @@ open (QRELS, $QRELS) || die "$0: cannot open \"$QRELS\": !$\n";
 my %tmpQrel = ();
 while (<QRELS>) {
   s/[\r\n]//g;
-  ($topic, $subtopic,$passage, $docno, $judgment) = split ('\s+');
+  ($topic, $subtopic, $docno, $judgment) = split ('\s+');
 
   $topic =~ s/[\r\n]//;
   die "$0: format error on line $. of \"$QRELS\"\n"
     unless
       $judgment =~ /^-?[0-9.]+$/; #&& $judgment <= $MAX_JUDGMENT
   if ($judgment > 0) {
-      $tmpQrel{$topic}{$docno}{$subtopic}{$passage}=$judgment;
+      $tmpQrel{$topic}{$docno}{$subtopic} = $judgment;
   }
 }
 close (QRELS);
@@ -71,20 +71,7 @@ foreach my $tmpTopicKey (keys %tmpQrel){
   foreach my $tmpDoc (keys %documents){
      my %subtopics = %{$documents{$tmpDoc}};
      foreach my $tmpSubtopic (keys %subtopics){
-        my %passages = %{$subtopics{$tmpSubtopic}};
-        my @rels = ();
-        foreach my $tmpPassage (keys %passages){
-	  push(@rels, $passages{$tmpPassage});
-        } 
-        my @tmpRel = sort {$b <=> $a} @rels;
-	my $final_qrel = 0;
-        my $rank = 0;
-        foreach my $element(@tmpRel){
-           $rank++;
-           my $discount = log($rank+1)/log(2);
-           $final_qrel += $element / $discount;
-        }
-		
+	my $final_qrel = $subtopics{$tmpSubtopic};
         $subTWeigt = 1;
         $qrels{$tmpTopicKey}{$tmpDoc}{$tmpSubtopic}=$final_qrel;
 
@@ -158,7 +145,7 @@ open (RUN, $RUN) || die "$0: cannot open \"$RUN\": !$\n";
 my $rank = "";
 while (<RUN>) {
   s/[\r\n]//g;
-  ($topic, $q0, $docno, $rank, $score, $runid, $iteration) = split ('\s+');
+  ($topic, $iteration, $docno, $score, $rel, $subtopics) = split ('\s+');
   if($maxIteration < $iteration){
 	$maxIteration = $iteration;
   }
@@ -167,7 +154,7 @@ while (<RUN>) {
   $topic =~ s/[\r\n]//;
   die "$0: format error on line $. of \"$RUN\"\n"
     unless
-      $q0 eq "Q0" && $docno;
+      $docno;
   $run[$#run + 1] = "$topic $docno $score $iteration";
 
   if(defined $doclength && length $doclength > 0){
