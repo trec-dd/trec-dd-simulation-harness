@@ -2,6 +2,9 @@
 
 from bs4 import BeautifulSoup
 import sys
+import collections
+
+qrels = collections.OrderedDict()
 
 with open(sys.argv[1]) as xmlfile:
     dd = BeautifulSoup(xmlfile, 'xml')
@@ -15,5 +18,7 @@ with open(sys.argv[1]) as xmlfile:
         doc_id = psg.docno.text
         rating = psg.rating.text
 
-        print "\t".join((topic_id, subtopic_id, doc_id, rating))
-        
+        qrels[topic_id + '\t' + subtopic_id + '\t' + doc_id] = rating
+
+for key in qrels:
+    print key, '\t', qrels[key]
