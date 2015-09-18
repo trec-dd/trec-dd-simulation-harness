@@ -159,6 +159,7 @@ my $rank = "";
 while (<RUN>) {
   s/[\r\n]//g;
   ($topic, $iteration, $docno, $score, $rel, $subtopics) = split ('\s+');
+  $iteration += 1;
   if($maxIteration < $iteration){
 	$maxIteration = $iteration;
   }
