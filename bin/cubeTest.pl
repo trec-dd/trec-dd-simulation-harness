@@ -25,7 +25,7 @@ $MAX_JUDGMENT = 4; # Maximum gain value allowed in qrels file.
 
 $MAX_HEIGHT = 5; #max hight for the test cube
 
-$beta =1; #a factor decide recall-oritention or precision-oritention
+$beta =1; #a factor decide recall-oriented or precision-oriented
 
 $gamma = 0.5;
 
@@ -41,7 +41,7 @@ $K = $ARGV[$arg++] or die $usage;
 %subtopicWeight=();
 # $topic $subtopic $gainHeights
 %currentGainHeight=();
-# $topic $subtopic $ocurrences
+# $topic $subtopic $occurrences
 %subtopicCover = ();
 # $docID $docLength
 %docLengthMap = ();
@@ -62,6 +62,9 @@ while (<QRELS>) {
       $judgment =~ /^-?[0-9.]+$/; #&& $judgment <= $MAX_JUDGMENT
   if ($judgment > 0) {
       $tmpQrel{$topic}{$docno}{$subtopic}{$passage} = $judgment;
+  }
+  if ($judgment == 0) {
+      $tmpQrel{$topic}{$docno}{$subtopic}{$passage} = 1;
   }
 }
 close (QRELS);
@@ -181,7 +184,7 @@ while (<RUN>) {
 
 #### Process runs: compute measures for each topic and average
 
-print "runid,topic,ct\@$K,ct_accel\@$K\n";
+print "runid,topic,ct\@$K,avg_ct\@$K\n";
 $topicCurrent = "-1";
 for ($i = 0; $i <= $#run; $i++) {
   ($topic, $docno, $score, $iteration) = split (' ', $run[$i]);
@@ -224,14 +227,26 @@ sub topicDone {
 
     my $ct_accu = 0;
     my $limit = ($K <= $maxIteration? $K : $maxIteration);
-    for($count =0 ; $count < $limit; $count ++){
-        &clearEnv;
-        my $accel_ct = &ct($count + 1, $topic, $ref_docls, $ref_iterations);
-        my $accel_time = &getTime($count + 1, $topic, $ref_docls, $ref_iterations);
+    my @tmp_docs = @{$ref_docls};
+    my @tmp_iterations = @{$ref_iterations};
+    my $lastIndex = $#tmp_docs + 1;
 
+    my $docCount = 0;
+    for($count =0 ; $count < $lastIndex; $count++){
+        my $curIteration = $tmp_iterations[$count];
+        if($curIteration > $K){
+	   last;
+        }
+
+        &clearEnv;
+
+        my $accel_ct = &ct_by_doc($count + 1, $topic, $ref_docls, $ref_iterations);
+        my $accel_time = &getTime($curIteration, $topic, $ref_docls, $ref_iterations);
+
+	$docCount++;
         $ct_accu += $accel_ct / $accel_time;
     }
-    $ct_accu = $ct_accu / $limit;
+    $ct_accu = $ct_accu / $docCount;
     $ct_accuTotal += $ct_accu;
     
     my $ct_speed = $_ct / $_time;
@@ -258,6 +273,21 @@ sub clearEnv{
   }  
 }
 
+sub ct_by_doc {
+ my ($k, $topic, $ref_docls, $ref_iterations) = @_;
+
+ my @local_docls = @{$ref_docls};
+ my @local_iterations = @{$ref_iterations};
+
+ my ($i, $score) = (0, 0);
+ for ($i = 0; $i <= $#local_docls && $i < $k ; $i++) {
+   my $docGain = &getDocGain($topic, $local_docls[$i], $i + 1);
+   $score += $docGain;
+ }
+
+ return $score/$MAX_HEIGHT; #normalization by max value
+}
+
 #########################################
 
 #### Compute ct over a sorted array of gain values, reporting at depth $k
@@ -274,7 +304,7 @@ sub ct {
    $score += $docGain;
  }
 
- return $score;
+ return $score/$MAX_HEIGHT; #normalization by max value
 }
 
 sub getDocGain{
@@ -341,6 +371,12 @@ sub getHeight{
   $benefit = 1;
   my $rel = &getHeightDiscount($pos) * $qrels{$topic}{$docno}{$subtopic} * $benefit;
 
+  my $currentHeight = $currentGainHeight{$topic}{$subtopic};
+
+  if($currentHeight + $rel > $MAX_HEIGHT){
+     $rel = $MAX_HEIGHT - $currentHeight;
+  }
+
   $currentGainHeight{$topic}{$subtopic} += $rel;
 
   return $rel;
@@ -351,7 +387,6 @@ sub getHeightDiscount{
 
   return ($gamma) ** $pos;
 }
-
 
 sub isStop{
   my ($topic, $subtopic) = @_;
