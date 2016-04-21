@@ -7,7 +7,7 @@ DD system during an interactive query session.
 Usage
 =====
 
-After installation (see below), you will want run the harness to
+After installation (see below), you will want to run the harness to
 generate a run file, you want to use the ``trec_dd_harness`` command.
 
 The purpose of this harness is to interact with your TREC DD system by
